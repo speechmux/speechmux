@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package vad.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/speechmux/proto/gen/go/vad/v1;vadv1";
+
+// Compatibility policy:
+// If a field is removed from any message, reserve both its number and name.
+// Example:
+//   reserved 12;
+//   reserved "old_field_name";
+
+// VADPlugin provides voice activity detection as a per-session streaming sidecar.
+// Core opens one independent StreamVAD stream per session; there is no session
+// multiplexing — the gRPC ThreadPoolExecutor assigns a dedicated worker per stream.
+service VADPlugin {
+  // StreamVAD is a per-session bidi-stream.
+  // Core sends SessionStart as the first message, then VAD frames; closes with SessionEnd.
+  rpc StreamVAD(stream VADRequest) returns (stream VADResponse);
+
+  // GetCapabilities returns static plugin metadata (model name, frame size, etc.).
+  rpc GetCapabilities(google.protobuf.Empty) returns (VADCapabilities);
+
+  // HealthCheck returns the current plugin state and resource usage.
+  rpc HealthCheck(google.protobuf.Empty) returns (common.v1.PluginHealthStatus);
+}
+
+// ─── Request ───────────────────────────────────────────────────────────────
+
+message VADRequest {
+  bytes  pcm_data        = 1; // PCM-S16LE mono audio bytes
+  int32  sample_rate     = 2; // Hz (must match SessionStart.sample_rate)
+  uint64 sequence_number = 3; // Monotonically increasing frame counter (Core-assigned)
+
+  // Control signals are sent inline.
+  // SessionStart is the FIRST message on every new stream.
+  // SessionEnd is the LAST message; after it the client half-closes the stream.
+  oneof signal {
+    SessionStart session_start = 10;
+    SessionEnd   session_end   = 11;
+  }
+}
+
+message SessionStart {
+  string session_id  = 1;
+  double threshold   = 2; // Speech probability threshold from VADConfig
+  int32  sample_rate = 3; // Expected sample rate for this session
+}
+
+message SessionEnd {}
+
+// ─── Response ──────────────────────────────────────────────────────────────
+
+message VADResponse {
+  bool   is_speech           = 1;
+  float  speech_probability  = 2; // 0.0–1.0
+  float  chunk_rms           = 3; // Root-mean-square energy of the chunk
+  double chunk_duration_sec  = 4; // Wall duration of the audio chunk
+  uint64 sequence_number     = 5; // Echo of VADRequest.sequence_number (for audio buffer matching)
+
+  // Non-zero only when the plugin encountered a recoverable per-frame error.
+  common.v1.PluginErrorCode error_code = 6;
+}
+
+// ─── Capabilities ──────────────────────────────────────────────────────────
+
+message VADCapabilities {
+  string        model_name              = 1;
+  int32         max_concurrent_sessions = 2;
+  int32         optimal_frame_ms        = 3; // Preferred frame size (e.g. 32 ms = 512 @ 16 kHz)
+  repeated int32 supported_sample_rates = 4;
+}
+

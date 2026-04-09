@@ -1,0 +1,21 @@
+# Generated code (committed intentionally for distribution)
+# Uncomment below lines if you want to exclude generated code from git
+# gen/go/
+# gen/python/
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python cache (in gen/python)
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/

@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package inference.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/speechmux/proto/gen/go/inference/v1;inferencev1";
+
+// Compatibility policy:
+// If a field is removed from any message, reserve both its number and name.
+// Example:
+//   reserved 12;
+//   reserved "old_field_name";
+
+// InferencePlugin performs STT decoding as a stateless unary service.
+// Core controls session state, scheduling, and concurrency; the plugin only runs inference.
+service InferencePlugin {
+  // Transcribe decodes a single audio segment and returns the full transcript.
+  rpc Transcribe(TranscribeRequest) returns (TranscribeResponse);
+
+  // GetCapabilities returns static engine metadata.
+  rpc GetCapabilities(google.protobuf.Empty) returns (InferenceCapabilities);
+
+  // HealthCheck returns the current plugin state and in-flight request count.
+  rpc HealthCheck(google.protobuf.Empty) returns (common.v1.PluginHealthStatus);
+}
+
+// ─── Transcribe ────────────────────────────────────────────────────────────
+
+message TranscribeRequest {
+  string       request_id     = 1; // Core-assigned unique ID (for deduplication / tracing)
+  string       session_id     = 2;
+  bytes        audio_data     = 3; // PCM-S16LE mono audio bytes
+  int32        sample_rate    = 4; // Hz
+  string       language_code  = 5; // BCP-47; empty = auto-detect
+  Task         task           = 6;
+  DecodeOptions decode_options = 7;
+  bool         is_final       = 8; // True for end-of-utterance decode
+  bool         is_partial     = 9; // True for speculative partial decode
+}
+
+message TranscribeResponse {
+  string           request_id         = 1;
+  string           session_id         = 2;
+  string           text               = 3;
+  string           language_code      = 4; // Detected BCP-47
+  double           inference_sec      = 5; // Wall time spent in inference
+  double           audio_duration_sec = 6; // Duration of audio decoded
+  double           real_time_factor   = 7; // inference_sec / audio_duration_sec
+  repeated Segment segments           = 8;
+  bool             no_speech_detected = 9;
+
+  // Non-zero when the plugin encountered a recoverable error for this request.
+  common.v1.PluginErrorCode error_code = 10;
+}
+
+// ─── Transcription task ────────────────────────────────────────────────────
+
+enum Task {
+  TASK_UNSPECIFIED = 0;
+  TASK_TRANSCRIBE  = 1;
+  TASK_TRANSLATE   = 2;
+}
+
+// ─── Decode options ────────────────────────────────────────────────────────
+
+message DecodeOptions {
+  int32 beam_size                    = 1;
+  int32 best_of                      = 2;
+  float temperature                  = 3;
+  float length_penalty               = 4;
+  bool  without_timestamps           = 5;
+  float compression_ratio_threshold  = 6;
+  float no_speech_threshold          = 7;
+  float log_prob_threshold           = 8;
+}
+
+// ─── Segment ───────────────────────────────────────────────────────────────
+
+message Segment {
+  string text          = 1;
+  double start_sec     = 2;
+  double end_sec       = 3;
+  float  avg_log_prob  = 4;
+  float  no_speech_prob = 5;
+}
+
+// ─── Capabilities ──────────────────────────────────────────────────────────
+
+message InferenceCapabilities {
+  string          engine_name              = 1;
+  string          model_size               = 2; // e.g. "large-v3-turbo"
+  string          device                   = 3; // e.g. "cuda", "mps", "cpu"
+  repeated string supported_languages      = 4; // BCP-47 codes; empty = all
+  int32           max_concurrent_requests  = 5;
+  bool            supports_partial_decode  = 6;
+}
+

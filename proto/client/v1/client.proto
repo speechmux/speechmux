@@ -1,0 +1,155 @@
+syntax = "proto3";
+
+package client.v1;
+
+option go_package = "github.com/speechmux/proto/gen/go/client/v1;clientv1";
+
+// Compatibility policy:
+// If a field is removed from any message, reserve both its number and name.
+// Example:
+//   reserved 12;
+//   reserved "old_field_name";
+
+// STTService exposes a single bidi-streaming RPC that combines session creation,
+// audio upload, and result delivery. This follows the Google Speech-to-Text v2
+// "oneof" streaming pattern.
+service STTService {
+  // StreamingRecognize handles the full session lifecycle over a single stream.
+  // First message MUST carry session_config; subsequent messages carry audio or signal.
+  // First response is session_created; subsequent responses carry results or errors.
+  rpc StreamingRecognize(stream StreamingRecognizeRequest) returns (stream StreamingRecognizeResponse);
+}
+
+// ─── Client → Server ───────────────────────────────────────────────────────
+
+message StreamingRecognizeRequest {
+  oneof streaming_request {
+    SessionConfig session_config = 1; // First message (required)
+    bytes         audio          = 2; // Raw encoded audio bytes
+    StreamSignal  signal         = 3; // Control signal (e.g. end-of-audio)
+  }
+}
+
+// SessionConfig carries all parameters needed to open a session.
+message SessionConfig {
+  string                    session_id           = 1; // Client-provided or server-generated
+  map<string, string>       attributes           = 2; // Arbitrary pass-through metadata
+  AudioConfig               audio_config         = 3;
+  RecognitionConfig         recognition_config   = 4;
+  VADConfig                 vad_config           = 5;
+  string                    api_key              = 6; // Authentication (optional if interceptor handles it)
+  StreamMode                stream_mode          = 7;
+}
+
+// StreamSignal carries out-of-band control messages after the session starts.
+message StreamSignal {
+  bool is_last = 1; // True when the client has sent all audio (EOF signal)
+}
+
+// ─── Server → Client ───────────────────────────────────────────────────────
+
+message StreamingRecognizeResponse {
+  oneof streaming_response {
+    SessionCreated   session_created = 1; // First response
+    RecognitionResult result         = 2; // Subsequent responses
+    StreamError      error           = 3; // Terminal error detail (precedes stream close)
+  }
+}
+
+// SessionCreated confirms that the session was accepted and echoes negotiated settings.
+message SessionCreated {
+  string            session_id             = 1;
+  string            token                  = 2; // For WebSocket reconnect (future)
+  AudioConfig       negotiated_audio       = 3;
+  RecognitionConfig negotiated_recognition = 4;
+  VADConfig         negotiated_vad         = 5;
+}
+
+// StreamError delivers a machine-readable error before the server closes the stream.
+message StreamError {
+  string error_code = 1; // ERR#### code string
+  string message    = 2; // Human-readable detail
+  bool   retryable  = 3; // True if the client should retry with back-off
+}
+
+// ─── Audio configuration ───────────────────────────────────────────────────
+
+enum AudioEncoding {
+  AUDIO_ENCODING_UNSPECIFIED = 0;
+  AUDIO_ENCODING_PCM_S16LE   = 1; // 16-bit signed little-endian PCM (default)
+  AUDIO_ENCODING_ALAW        = 2;
+  AUDIO_ENCODING_MULAW       = 3;
+  AUDIO_ENCODING_WAV         = 4;
+  AUDIO_ENCODING_OGG_OPUS    = 5;
+}
+
+message AudioConfig {
+  AudioEncoding encoding    = 1;
+  int32         sample_rate = 2; // Hz, e.g. 16000
+  int32         channels    = 3; // 1 = mono (required)
+}
+
+// ─── Recognition configuration ─────────────────────────────────────────────
+
+enum Task {
+  TASK_UNSPECIFIED = 0;
+  TASK_TRANSCRIBE  = 1;
+  TASK_TRANSLATE   = 2;
+}
+
+enum DecodeProfile {
+  DECODE_PROFILE_UNSPECIFIED = 0;
+  DECODE_PROFILE_REALTIME    = 1; // Low-latency: beam_size=1, best-effort
+  DECODE_PROFILE_ACCURATE    = 2; // High-accuracy: beam_size=5
+}
+
+// StreamMode controls backpressure policy.
+// REALTIME: microphone input — apply backpressure to slow the sender.
+// BATCH:    file upload — allow burst; buffer aggressively.
+enum StreamMode {
+  STREAM_MODE_UNSPECIFIED = 0;
+  STREAM_MODE_REALTIME    = 1;
+  STREAM_MODE_BATCH       = 2;
+}
+
+message RecognitionConfig {
+  string        language_code  = 1; // BCP-47 (e.g. "ko", "en"). Empty = auto-detect.
+  Task          task           = 2;
+  DecodeProfile decode_profile = 3;
+  string        engine_hint    = 4; // Preferred engine id (e.g. "mlx_whisper")
+}
+
+// ─── VAD configuration ─────────────────────────────────────────────────────
+
+enum VADMode {
+  VAD_MODE_UNSPECIFIED = 0; // Zero value; Core applies default (CONTINUE) behaviour when unset
+  VAD_MODE_CONTINUE    = 1; // Keep session active after first speech trigger
+  VAD_MODE_AUTO_END    = 2; // Close session automatically after first utterance
+}
+
+message VADConfig {
+  VADMode mode              = 1;
+  double  silence_duration  = 2; // Trailing silence to trigger EPD (seconds)
+  double  threshold         = 3; // Speech probability threshold (0.0–1.0)
+  optional double threshold_override = 4; // Explicit override (allows 0.0)
+}
+
+// ─── Recognition result ─────────────────────────────────────────────────────
+
+message RecognitionResult {
+  bool   is_final        = 1;
+  string text            = 2; // Full transcript for this utterance (when is_final=true)
+  string committed_text  = 3; // Stable prefix visible in real time
+  string unstable_text   = 4; // Unstable suffix (may change with next partial)
+  double audio_duration  = 5; // Duration of audio decoded (seconds)
+  string language_code   = 6; // Detected BCP-47 language
+  ResultMeta meta        = 7;
+  double start_sec       = 8; // Session-relative utterance start time (seconds)
+  double end_sec         = 9; // Session-relative utterance end time (seconds)
+}
+
+message ResultMeta {
+  double latency_sec       = 1; // Wall-clock latency from audio-end to result
+  double real_time_factor  = 2; // inference_sec / audio_duration
+  int32  utterance_index   = 3; // Monotonically increasing utterance counter
+}
