@@ -10,6 +10,7 @@ import pytest
 
 from speechmux_plugin_vad.engine.dummy import DummyVADEngine
 from speechmux_plugin_vad.service.vad_servicer import VADPluginServicer
+from google.protobuf import empty_pb2
 from stt_proto.common.v1 import common_pb2
 from stt_proto.vad.v1 import vad_pb2
 
@@ -81,7 +82,7 @@ def test_active_count_decremented_after_stream():
     frames = [_session_start_msg(), _audio_msg(_pcm_bytes()), _session_end_msg()]
     list(svc.StreamVAD(iter(frames), ctx))
 
-    health = svc.HealthCheck(vad_pb2.Empty(), ctx)
+    health = svc.HealthCheck(empty_pb2.Empty(), ctx)
     assert health.active == 0
 
 
@@ -138,7 +139,7 @@ def test_get_capabilities():
     engine = DummyVADEngine()
     svc = VADPluginServicer(engine)
     ctx = _make_context()
-    caps = svc.GetCapabilities(vad_pb2.Empty(), ctx)
+    caps = svc.GetCapabilities(empty_pb2.Empty(), ctx)
     assert caps.model_name == "dummy_vad"
     assert caps.optimal_frame_ms > 0
     assert len(caps.supported_sample_rates) > 0
@@ -150,7 +151,7 @@ def test_health_check_initial():
     engine = DummyVADEngine()
     svc = VADPluginServicer(engine)
     ctx = _make_context()
-    health = svc.HealthCheck(vad_pb2.Empty(), ctx)
+    health = svc.HealthCheck(empty_pb2.Empty(), ctx)
     assert health.state == common_pb2.PLUGIN_STATE_READY
     assert health.active == 0
 
@@ -158,7 +159,7 @@ def test_health_check_initial():
 def test_health_message_ok():
     svc = VADPluginServicer(DummyVADEngine())
     ctx = _make_context()
-    health = svc.HealthCheck(vad_pb2.Empty(), ctx)
+    health = svc.HealthCheck(empty_pb2.Empty(), ctx)
     assert health.message == "ok"
 
 

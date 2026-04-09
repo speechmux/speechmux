@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import grpc  # type: ignore[import-untyped]
 
+from google.protobuf import empty_pb2  # type: ignore[import-untyped]
 from stt_proto.common.v1 import common_pb2  # type: ignore[import-untyped]
 from stt_proto.vad.v1 import vad_pb2, vad_pb2_grpc  # type: ignore[import-untyped]
 
@@ -177,7 +178,7 @@ class VADPluginServicer(vad_pb2_grpc.VADPluginServicer):
 
     def GetCapabilities(
         self,
-        request: vad_pb2.Empty,
+        request: empty_pb2.Empty,
         context: grpc.ServicerContext,
     ) -> vad_pb2.VADCapabilities:
         """Return static capabilities of the loaded engine."""
@@ -192,7 +193,7 @@ class VADPluginServicer(vad_pb2_grpc.VADPluginServicer):
 
     def HealthCheck(
         self,
-        request: vad_pb2.Empty,
+        request: empty_pb2.Empty,
         context: grpc.ServicerContext,
     ) -> common_pb2.PluginHealthStatus:
         """Return current plugin health and active session count."""
