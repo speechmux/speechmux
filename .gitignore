@@ -1,0 +1,18 @@
+# Sub-repos — cloned separately via make clone-*
+# Patterns cover current and future plugins automatically.
+proto/
+core/
+plugin-*/
+client-*/
+
+# Python virtual environment (workspace-level .venv used by Makefile)
+.venv/
+
+# Claude Code local state (memory, session files)
+.claude/
+
+# Sample audio files (not tracked — no references in docs or Makefile)
+assets/
+
+# macOS
+.DS_Store
