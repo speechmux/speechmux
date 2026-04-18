@@ -49,6 +49,11 @@ class InferencePluginStub(object):
                 request_serializer=inference_dot_v1_dot_inference__pb2.TranscribeRequest.SerializeToString,
                 response_deserializer=inference_dot_v1_dot_inference__pb2.TranscribeResponse.FromString,
                 _registered_method=True)
+        self.TranscribeStream = channel.stream_stream(
+                '/inference.v1.InferencePlugin/TranscribeStream',
+                request_serializer=inference_dot_v1_dot_inference__pb2.StreamRequest.SerializeToString,
+                response_deserializer=inference_dot_v1_dot_inference__pb2.StreamResponse.FromString,
+                _registered_method=True)
         self.GetCapabilities = channel.unary_unary(
                 '/inference.v1.InferencePlugin/GetCapabilities',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
@@ -79,6 +84,16 @@ class InferencePluginServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def TranscribeStream(self, request_iterator, context):
+        """TranscribeStream opens a persistent bidi stream for engines that decode
+        continuously. The first client message must be StreamStartConfig; audio
+        chunks follow; StreamControl.FINALIZE_UTTERANCE triggers a final
+        hypothesis for the current utterance.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetCapabilities(self, request, context):
         """GetCapabilities returns static engine metadata.
         """
@@ -100,6 +115,11 @@ def add_InferencePluginServicer_to_server(servicer, server):
                     servicer.Transcribe,
                     request_deserializer=inference_dot_v1_dot_inference__pb2.TranscribeRequest.FromString,
                     response_serializer=inference_dot_v1_dot_inference__pb2.TranscribeResponse.SerializeToString,
+            ),
+            'TranscribeStream': grpc.stream_stream_rpc_method_handler(
+                    servicer.TranscribeStream,
+                    request_deserializer=inference_dot_v1_dot_inference__pb2.StreamRequest.FromString,
+                    response_serializer=inference_dot_v1_dot_inference__pb2.StreamResponse.SerializeToString,
             ),
             'GetCapabilities': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCapabilities,
@@ -147,6 +167,33 @@ class InferencePlugin(object):
             '/inference.v1.InferencePlugin/Transcribe',
             inference_dot_v1_dot_inference__pb2.TranscribeRequest.SerializeToString,
             inference_dot_v1_dot_inference__pb2.TranscribeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def TranscribeStream(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            '/inference.v1.InferencePlugin/TranscribeStream',
+            inference_dot_v1_dot_inference__pb2.StreamRequest.SerializeToString,
+            inference_dot_v1_dot_inference__pb2.StreamResponse.FromString,
             options,
             channel_credentials,
             insecure,

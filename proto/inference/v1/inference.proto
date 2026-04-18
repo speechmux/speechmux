@@ -19,6 +19,12 @@ service InferencePlugin {
   // Transcribe decodes a single audio segment and returns the full transcript.
   rpc Transcribe(TranscribeRequest) returns (TranscribeResponse);
 
+  // TranscribeStream opens a persistent bidi stream for engines that decode
+  // continuously. The first client message must be StreamStartConfig; audio
+  // chunks follow; StreamControl.FINALIZE_UTTERANCE triggers a final
+  // hypothesis for the current utterance.
+  rpc TranscribeStream(stream StreamRequest) returns (stream StreamResponse);
+
   // GetCapabilities returns static engine metadata.
   rpc GetCapabilities(google.protobuf.Empty) returns (InferenceCapabilities);
 
@@ -95,5 +101,75 @@ message InferenceCapabilities {
   repeated string supported_languages      = 4; // BCP-47 codes; empty = all
   int32           max_concurrent_requests  = 5;
   bool            supports_partial_decode  = 6;
+  StreamingMode         streaming_mode         = 7; // UNSPECIFIED → BATCH_ONLY for backward compat
+  EndpointingCapability endpointing_capability = 8; // UNSPECIFIED → NONE for backward compat
+}
+
+enum StreamingMode {
+  STREAMING_MODE_UNSPECIFIED = 0; // treated as BATCH_ONLY for backward compat
+  STREAMING_MODE_BATCH_ONLY  = 1;
+  STREAMING_MODE_NATIVE      = 2;
+}
+
+enum EndpointingCapability {
+  ENDPOINTING_CAPABILITY_UNSPECIFIED   = 0; // treated as NONE
+  ENDPOINTING_CAPABILITY_NONE          = 1;
+  ENDPOINTING_CAPABILITY_DETECTION     = 2;
+  ENDPOINTING_CAPABILITY_AUTO_FINALIZE = 3;
+}
+
+// ─── Streaming RPC messages ────────────────────────────────────────────────
+
+message StreamRequest {
+  oneof payload {
+    StreamStartConfig start   = 1;
+    AudioChunk        audio   = 2;
+    StreamControl     control = 3;
+  }
+}
+
+message StreamStartConfig {
+  string        session_id     = 1;
+  int32         sample_rate    = 2;
+  string        language_code  = 3;
+  Task          task           = 4;
+  DecodeOptions decode_options = 5;
+}
+
+message AudioChunk {
+  uint64 sequence_number = 1;
+  bytes  audio_data      = 2; // PCM-S16LE mono
+}
+
+message StreamControl {
+  enum Kind {
+    KIND_UNSPECIFIED        = 0;
+    KIND_FINALIZE_UTTERANCE = 1;
+    KIND_CANCEL             = 2;
+  }
+  Kind kind = 1;
+}
+
+message StreamResponse {
+  oneof payload {
+    StreamHypothesis hypothesis = 1;
+    StreamError      error      = 2;
+  }
+}
+
+message StreamHypothesis {
+  string request_id     = 1;
+  string text           = 2;
+  string committed_text = 3;
+  string unstable_text  = 4;
+  bool   is_final       = 5;
+  double start_sec      = 6;
+  double end_sec        = 7;
+  string language_code  = 8;
+}
+
+message StreamError {
+  common.v1.PluginErrorCode code    = 1;
+  string                    message = 2;
 }
 

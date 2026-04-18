@@ -21,9 +21,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InferencePlugin_Transcribe_FullMethodName      = "/inference.v1.InferencePlugin/Transcribe"
-	InferencePlugin_GetCapabilities_FullMethodName = "/inference.v1.InferencePlugin/GetCapabilities"
-	InferencePlugin_HealthCheck_FullMethodName     = "/inference.v1.InferencePlugin/HealthCheck"
+	InferencePlugin_Transcribe_FullMethodName       = "/inference.v1.InferencePlugin/Transcribe"
+	InferencePlugin_TranscribeStream_FullMethodName = "/inference.v1.InferencePlugin/TranscribeStream"
+	InferencePlugin_GetCapabilities_FullMethodName  = "/inference.v1.InferencePlugin/GetCapabilities"
+	InferencePlugin_HealthCheck_FullMethodName      = "/inference.v1.InferencePlugin/HealthCheck"
 )
 
 // InferencePluginClient is the client API for InferencePlugin service.
@@ -35,6 +36,11 @@ const (
 type InferencePluginClient interface {
 	// Transcribe decodes a single audio segment and returns the full transcript.
 	Transcribe(ctx context.Context, in *TranscribeRequest, opts ...grpc.CallOption) (*TranscribeResponse, error)
+	// TranscribeStream opens a persistent bidi stream for engines that decode
+	// continuously. The first client message must be StreamStartConfig; audio
+	// chunks follow; StreamControl.FINALIZE_UTTERANCE triggers a final
+	// hypothesis for the current utterance.
+	TranscribeStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StreamRequest, StreamResponse], error)
 	// GetCapabilities returns static engine metadata.
 	GetCapabilities(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InferenceCapabilities, error)
 	// HealthCheck returns the current plugin state and in-flight request count.
@@ -58,6 +64,19 @@ func (c *inferencePluginClient) Transcribe(ctx context.Context, in *TranscribeRe
 	}
 	return out, nil
 }
+
+func (c *inferencePluginClient) TranscribeStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StreamRequest, StreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &InferencePlugin_ServiceDesc.Streams[0], InferencePlugin_TranscribeStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamRequest, StreamResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type InferencePlugin_TranscribeStreamClient = grpc.BidiStreamingClient[StreamRequest, StreamResponse]
 
 func (c *inferencePluginClient) GetCapabilities(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InferenceCapabilities, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -88,6 +107,11 @@ func (c *inferencePluginClient) HealthCheck(ctx context.Context, in *emptypb.Emp
 type InferencePluginServer interface {
 	// Transcribe decodes a single audio segment and returns the full transcript.
 	Transcribe(context.Context, *TranscribeRequest) (*TranscribeResponse, error)
+	// TranscribeStream opens a persistent bidi stream for engines that decode
+	// continuously. The first client message must be StreamStartConfig; audio
+	// chunks follow; StreamControl.FINALIZE_UTTERANCE triggers a final
+	// hypothesis for the current utterance.
+	TranscribeStream(grpc.BidiStreamingServer[StreamRequest, StreamResponse]) error
 	// GetCapabilities returns static engine metadata.
 	GetCapabilities(context.Context, *emptypb.Empty) (*InferenceCapabilities, error)
 	// HealthCheck returns the current plugin state and in-flight request count.
@@ -104,6 +128,9 @@ type UnimplementedInferencePluginServer struct{}
 
 func (UnimplementedInferencePluginServer) Transcribe(context.Context, *TranscribeRequest) (*TranscribeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Transcribe not implemented")
+}
+func (UnimplementedInferencePluginServer) TranscribeStream(grpc.BidiStreamingServer[StreamRequest, StreamResponse]) error {
+	return status.Error(codes.Unimplemented, "method TranscribeStream not implemented")
 }
 func (UnimplementedInferencePluginServer) GetCapabilities(context.Context, *emptypb.Empty) (*InferenceCapabilities, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCapabilities not implemented")
@@ -149,6 +176,13 @@ func _InferencePlugin_Transcribe_Handler(srv interface{}, ctx context.Context, d
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _InferencePlugin_TranscribeStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(InferencePluginServer).TranscribeStream(&grpc.GenericServerStream[StreamRequest, StreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type InferencePlugin_TranscribeStreamServer = grpc.BidiStreamingServer[StreamRequest, StreamResponse]
 
 func _InferencePlugin_GetCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
@@ -206,6 +240,13 @@ var InferencePlugin_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InferencePlugin_HealthCheck_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "TranscribeStream",
+			Handler:       _InferencePlugin_TranscribeStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "inference/v1/inference.proto",
 }

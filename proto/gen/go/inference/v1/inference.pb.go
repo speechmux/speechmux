@@ -72,6 +72,156 @@ func (Task) EnumDescriptor() ([]byte, []int) {
 	return file_inference_v1_inference_proto_rawDescGZIP(), []int{0}
 }
 
+type StreamingMode int32
+
+const (
+	StreamingMode_STREAMING_MODE_UNSPECIFIED StreamingMode = 0 // treated as BATCH_ONLY for backward compat
+	StreamingMode_STREAMING_MODE_BATCH_ONLY  StreamingMode = 1
+	StreamingMode_STREAMING_MODE_NATIVE      StreamingMode = 2
+)
+
+// Enum value maps for StreamingMode.
+var (
+	StreamingMode_name = map[int32]string{
+		0: "STREAMING_MODE_UNSPECIFIED",
+		1: "STREAMING_MODE_BATCH_ONLY",
+		2: "STREAMING_MODE_NATIVE",
+	}
+	StreamingMode_value = map[string]int32{
+		"STREAMING_MODE_UNSPECIFIED": 0,
+		"STREAMING_MODE_BATCH_ONLY":  1,
+		"STREAMING_MODE_NATIVE":      2,
+	}
+)
+
+func (x StreamingMode) Enum() *StreamingMode {
+	p := new(StreamingMode)
+	*p = x
+	return p
+}
+
+func (x StreamingMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StreamingMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_inference_v1_inference_proto_enumTypes[1].Descriptor()
+}
+
+func (StreamingMode) Type() protoreflect.EnumType {
+	return &file_inference_v1_inference_proto_enumTypes[1]
+}
+
+func (x StreamingMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StreamingMode.Descriptor instead.
+func (StreamingMode) EnumDescriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{1}
+}
+
+type EndpointingCapability int32
+
+const (
+	EndpointingCapability_ENDPOINTING_CAPABILITY_UNSPECIFIED   EndpointingCapability = 0 // treated as NONE
+	EndpointingCapability_ENDPOINTING_CAPABILITY_NONE          EndpointingCapability = 1
+	EndpointingCapability_ENDPOINTING_CAPABILITY_DETECTION     EndpointingCapability = 2
+	EndpointingCapability_ENDPOINTING_CAPABILITY_AUTO_FINALIZE EndpointingCapability = 3
+)
+
+// Enum value maps for EndpointingCapability.
+var (
+	EndpointingCapability_name = map[int32]string{
+		0: "ENDPOINTING_CAPABILITY_UNSPECIFIED",
+		1: "ENDPOINTING_CAPABILITY_NONE",
+		2: "ENDPOINTING_CAPABILITY_DETECTION",
+		3: "ENDPOINTING_CAPABILITY_AUTO_FINALIZE",
+	}
+	EndpointingCapability_value = map[string]int32{
+		"ENDPOINTING_CAPABILITY_UNSPECIFIED":   0,
+		"ENDPOINTING_CAPABILITY_NONE":          1,
+		"ENDPOINTING_CAPABILITY_DETECTION":     2,
+		"ENDPOINTING_CAPABILITY_AUTO_FINALIZE": 3,
+	}
+)
+
+func (x EndpointingCapability) Enum() *EndpointingCapability {
+	p := new(EndpointingCapability)
+	*p = x
+	return p
+}
+
+func (x EndpointingCapability) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EndpointingCapability) Descriptor() protoreflect.EnumDescriptor {
+	return file_inference_v1_inference_proto_enumTypes[2].Descriptor()
+}
+
+func (EndpointingCapability) Type() protoreflect.EnumType {
+	return &file_inference_v1_inference_proto_enumTypes[2]
+}
+
+func (x EndpointingCapability) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EndpointingCapability.Descriptor instead.
+func (EndpointingCapability) EnumDescriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{2}
+}
+
+type StreamControl_Kind int32
+
+const (
+	StreamControl_KIND_UNSPECIFIED        StreamControl_Kind = 0
+	StreamControl_KIND_FINALIZE_UTTERANCE StreamControl_Kind = 1
+	StreamControl_KIND_CANCEL             StreamControl_Kind = 2
+)
+
+// Enum value maps for StreamControl_Kind.
+var (
+	StreamControl_Kind_name = map[int32]string{
+		0: "KIND_UNSPECIFIED",
+		1: "KIND_FINALIZE_UTTERANCE",
+		2: "KIND_CANCEL",
+	}
+	StreamControl_Kind_value = map[string]int32{
+		"KIND_UNSPECIFIED":        0,
+		"KIND_FINALIZE_UTTERANCE": 1,
+		"KIND_CANCEL":             2,
+	}
+)
+
+func (x StreamControl_Kind) Enum() *StreamControl_Kind {
+	p := new(StreamControl_Kind)
+	*p = x
+	return p
+}
+
+func (x StreamControl_Kind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StreamControl_Kind) Descriptor() protoreflect.EnumDescriptor {
+	return file_inference_v1_inference_proto_enumTypes[3].Descriptor()
+}
+
+func (StreamControl_Kind) Type() protoreflect.EnumType {
+	return &file_inference_v1_inference_proto_enumTypes[3]
+}
+
+func (x StreamControl_Kind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StreamControl_Kind.Descriptor instead.
+func (StreamControl_Kind) EnumDescriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{8, 0}
+}
+
 type TranscribeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // Core-assigned unique ID (for deduplication / tracing)
@@ -481,6 +631,8 @@ type InferenceCapabilities struct {
 	SupportedLanguages    []string               `protobuf:"bytes,4,rep,name=supported_languages,json=supportedLanguages,proto3" json:"supported_languages,omitempty"` // BCP-47 codes; empty = all
 	MaxConcurrentRequests int32                  `protobuf:"varint,5,opt,name=max_concurrent_requests,json=maxConcurrentRequests,proto3" json:"max_concurrent_requests,omitempty"`
 	SupportsPartialDecode bool                   `protobuf:"varint,6,opt,name=supports_partial_decode,json=supportsPartialDecode,proto3" json:"supports_partial_decode,omitempty"`
+	StreamingMode         StreamingMode          `protobuf:"varint,7,opt,name=streaming_mode,json=streamingMode,proto3,enum=inference.v1.StreamingMode" json:"streaming_mode,omitempty"`                                 // UNSPECIFIED → BATCH_ONLY for backward compat
+	EndpointingCapability EndpointingCapability  `protobuf:"varint,8,opt,name=endpointing_capability,json=endpointingCapability,proto3,enum=inference.v1.EndpointingCapability" json:"endpointing_capability,omitempty"` // UNSPECIFIED → NONE for backward compat
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -557,6 +709,524 @@ func (x *InferenceCapabilities) GetSupportsPartialDecode() bool {
 	return false
 }
 
+func (x *InferenceCapabilities) GetStreamingMode() StreamingMode {
+	if x != nil {
+		return x.StreamingMode
+	}
+	return StreamingMode_STREAMING_MODE_UNSPECIFIED
+}
+
+func (x *InferenceCapabilities) GetEndpointingCapability() EndpointingCapability {
+	if x != nil {
+		return x.EndpointingCapability
+	}
+	return EndpointingCapability_ENDPOINTING_CAPABILITY_UNSPECIFIED
+}
+
+type StreamRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*StreamRequest_Start
+	//	*StreamRequest_Audio
+	//	*StreamRequest_Control
+	Payload       isStreamRequest_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamRequest) Reset() {
+	*x = StreamRequest{}
+	mi := &file_inference_v1_inference_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamRequest) ProtoMessage() {}
+
+func (x *StreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_v1_inference_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamRequest.ProtoReflect.Descriptor instead.
+func (*StreamRequest) Descriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *StreamRequest) GetPayload() isStreamRequest_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *StreamRequest) GetStart() *StreamStartConfig {
+	if x != nil {
+		if x, ok := x.Payload.(*StreamRequest_Start); ok {
+			return x.Start
+		}
+	}
+	return nil
+}
+
+func (x *StreamRequest) GetAudio() *AudioChunk {
+	if x != nil {
+		if x, ok := x.Payload.(*StreamRequest_Audio); ok {
+			return x.Audio
+		}
+	}
+	return nil
+}
+
+func (x *StreamRequest) GetControl() *StreamControl {
+	if x != nil {
+		if x, ok := x.Payload.(*StreamRequest_Control); ok {
+			return x.Control
+		}
+	}
+	return nil
+}
+
+type isStreamRequest_Payload interface {
+	isStreamRequest_Payload()
+}
+
+type StreamRequest_Start struct {
+	Start *StreamStartConfig `protobuf:"bytes,1,opt,name=start,proto3,oneof"`
+}
+
+type StreamRequest_Audio struct {
+	Audio *AudioChunk `protobuf:"bytes,2,opt,name=audio,proto3,oneof"`
+}
+
+type StreamRequest_Control struct {
+	Control *StreamControl `protobuf:"bytes,3,opt,name=control,proto3,oneof"`
+}
+
+func (*StreamRequest_Start) isStreamRequest_Payload() {}
+
+func (*StreamRequest_Audio) isStreamRequest_Payload() {}
+
+func (*StreamRequest_Control) isStreamRequest_Payload() {}
+
+type StreamStartConfig struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	SampleRate    int32                  `protobuf:"varint,2,opt,name=sample_rate,json=sampleRate,proto3" json:"sample_rate,omitempty"`
+	LanguageCode  string                 `protobuf:"bytes,3,opt,name=language_code,json=languageCode,proto3" json:"language_code,omitempty"`
+	Task          Task                   `protobuf:"varint,4,opt,name=task,proto3,enum=inference.v1.Task" json:"task,omitempty"`
+	DecodeOptions *DecodeOptions         `protobuf:"bytes,5,opt,name=decode_options,json=decodeOptions,proto3" json:"decode_options,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamStartConfig) Reset() {
+	*x = StreamStartConfig{}
+	mi := &file_inference_v1_inference_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamStartConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamStartConfig) ProtoMessage() {}
+
+func (x *StreamStartConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_v1_inference_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamStartConfig.ProtoReflect.Descriptor instead.
+func (*StreamStartConfig) Descriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *StreamStartConfig) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *StreamStartConfig) GetSampleRate() int32 {
+	if x != nil {
+		return x.SampleRate
+	}
+	return 0
+}
+
+func (x *StreamStartConfig) GetLanguageCode() string {
+	if x != nil {
+		return x.LanguageCode
+	}
+	return ""
+}
+
+func (x *StreamStartConfig) GetTask() Task {
+	if x != nil {
+		return x.Task
+	}
+	return Task_TASK_UNSPECIFIED
+}
+
+func (x *StreamStartConfig) GetDecodeOptions() *DecodeOptions {
+	if x != nil {
+		return x.DecodeOptions
+	}
+	return nil
+}
+
+type AudioChunk struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	SequenceNumber uint64                 `protobuf:"varint,1,opt,name=sequence_number,json=sequenceNumber,proto3" json:"sequence_number,omitempty"`
+	AudioData      []byte                 `protobuf:"bytes,2,opt,name=audio_data,json=audioData,proto3" json:"audio_data,omitempty"` // PCM-S16LE mono
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AudioChunk) Reset() {
+	*x = AudioChunk{}
+	mi := &file_inference_v1_inference_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AudioChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AudioChunk) ProtoMessage() {}
+
+func (x *AudioChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_v1_inference_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AudioChunk.ProtoReflect.Descriptor instead.
+func (*AudioChunk) Descriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AudioChunk) GetSequenceNumber() uint64 {
+	if x != nil {
+		return x.SequenceNumber
+	}
+	return 0
+}
+
+func (x *AudioChunk) GetAudioData() []byte {
+	if x != nil {
+		return x.AudioData
+	}
+	return nil
+}
+
+type StreamControl struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          StreamControl_Kind     `protobuf:"varint,1,opt,name=kind,proto3,enum=inference.v1.StreamControl_Kind" json:"kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamControl) Reset() {
+	*x = StreamControl{}
+	mi := &file_inference_v1_inference_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamControl) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamControl) ProtoMessage() {}
+
+func (x *StreamControl) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_v1_inference_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamControl.ProtoReflect.Descriptor instead.
+func (*StreamControl) Descriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *StreamControl) GetKind() StreamControl_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return StreamControl_KIND_UNSPECIFIED
+}
+
+type StreamResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*StreamResponse_Hypothesis
+	//	*StreamResponse_Error
+	Payload       isStreamResponse_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamResponse) Reset() {
+	*x = StreamResponse{}
+	mi := &file_inference_v1_inference_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamResponse) ProtoMessage() {}
+
+func (x *StreamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_v1_inference_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamResponse.ProtoReflect.Descriptor instead.
+func (*StreamResponse) Descriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *StreamResponse) GetPayload() isStreamResponse_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *StreamResponse) GetHypothesis() *StreamHypothesis {
+	if x != nil {
+		if x, ok := x.Payload.(*StreamResponse_Hypothesis); ok {
+			return x.Hypothesis
+		}
+	}
+	return nil
+}
+
+func (x *StreamResponse) GetError() *StreamError {
+	if x != nil {
+		if x, ok := x.Payload.(*StreamResponse_Error); ok {
+			return x.Error
+		}
+	}
+	return nil
+}
+
+type isStreamResponse_Payload interface {
+	isStreamResponse_Payload()
+}
+
+type StreamResponse_Hypothesis struct {
+	Hypothesis *StreamHypothesis `protobuf:"bytes,1,opt,name=hypothesis,proto3,oneof"`
+}
+
+type StreamResponse_Error struct {
+	Error *StreamError `protobuf:"bytes,2,opt,name=error,proto3,oneof"`
+}
+
+func (*StreamResponse_Hypothesis) isStreamResponse_Payload() {}
+
+func (*StreamResponse_Error) isStreamResponse_Payload() {}
+
+type StreamHypothesis struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	CommittedText string                 `protobuf:"bytes,3,opt,name=committed_text,json=committedText,proto3" json:"committed_text,omitempty"`
+	UnstableText  string                 `protobuf:"bytes,4,opt,name=unstable_text,json=unstableText,proto3" json:"unstable_text,omitempty"`
+	IsFinal       bool                   `protobuf:"varint,5,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`
+	StartSec      float64                `protobuf:"fixed64,6,opt,name=start_sec,json=startSec,proto3" json:"start_sec,omitempty"`
+	EndSec        float64                `protobuf:"fixed64,7,opt,name=end_sec,json=endSec,proto3" json:"end_sec,omitempty"`
+	LanguageCode  string                 `protobuf:"bytes,8,opt,name=language_code,json=languageCode,proto3" json:"language_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamHypothesis) Reset() {
+	*x = StreamHypothesis{}
+	mi := &file_inference_v1_inference_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamHypothesis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamHypothesis) ProtoMessage() {}
+
+func (x *StreamHypothesis) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_v1_inference_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamHypothesis.ProtoReflect.Descriptor instead.
+func (*StreamHypothesis) Descriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *StreamHypothesis) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *StreamHypothesis) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *StreamHypothesis) GetCommittedText() string {
+	if x != nil {
+		return x.CommittedText
+	}
+	return ""
+}
+
+func (x *StreamHypothesis) GetUnstableText() string {
+	if x != nil {
+		return x.UnstableText
+	}
+	return ""
+}
+
+func (x *StreamHypothesis) GetIsFinal() bool {
+	if x != nil {
+		return x.IsFinal
+	}
+	return false
+}
+
+func (x *StreamHypothesis) GetStartSec() float64 {
+	if x != nil {
+		return x.StartSec
+	}
+	return 0
+}
+
+func (x *StreamHypothesis) GetEndSec() float64 {
+	if x != nil {
+		return x.EndSec
+	}
+	return 0
+}
+
+func (x *StreamHypothesis) GetLanguageCode() string {
+	if x != nil {
+		return x.LanguageCode
+	}
+	return ""
+}
+
+type StreamError struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          v1.PluginErrorCode     `protobuf:"varint,1,opt,name=code,proto3,enum=common.v1.PluginErrorCode" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamError) Reset() {
+	*x = StreamError{}
+	mi := &file_inference_v1_inference_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamError) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamError) ProtoMessage() {}
+
+func (x *StreamError) ProtoReflect() protoreflect.Message {
+	mi := &file_inference_v1_inference_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamError.ProtoReflect.Descriptor instead.
+func (*StreamError) Descriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *StreamError) GetCode() v1.PluginErrorCode {
+	if x != nil {
+		return x.Code
+	}
+	return v1.PluginErrorCode(0)
+}
+
+func (x *StreamError) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_inference_v1_inference_proto protoreflect.FileDescriptor
 
 const file_inference_v1_inference_proto_rawDesc = "" +
@@ -607,7 +1277,7 @@ const file_inference_v1_inference_proto_rawDesc = "" +
 	"\aend_sec\x18\x03 \x01(\x01R\x06endSec\x12 \n" +
 	"\favg_log_prob\x18\x04 \x01(\x02R\n" +
 	"avgLogProb\x12$\n" +
-	"\x0eno_speech_prob\x18\x05 \x01(\x02R\fnoSpeechProb\"\x90\x02\n" +
+	"\x0eno_speech_prob\x18\x05 \x01(\x02R\fnoSpeechProb\"\xb0\x03\n" +
 	"\x15InferenceCapabilities\x12\x1f\n" +
 	"\vengine_name\x18\x01 \x01(\tR\n" +
 	"engineName\x12\x1d\n" +
@@ -616,14 +1286,69 @@ const file_inference_v1_inference_proto_rawDesc = "" +
 	"\x06device\x18\x03 \x01(\tR\x06device\x12/\n" +
 	"\x13supported_languages\x18\x04 \x03(\tR\x12supportedLanguages\x126\n" +
 	"\x17max_concurrent_requests\x18\x05 \x01(\x05R\x15maxConcurrentRequests\x126\n" +
-	"\x17supports_partial_decode\x18\x06 \x01(\bR\x15supportsPartialDecode*E\n" +
+	"\x17supports_partial_decode\x18\x06 \x01(\bR\x15supportsPartialDecode\x12B\n" +
+	"\x0estreaming_mode\x18\a \x01(\x0e2\x1b.inference.v1.StreamingModeR\rstreamingMode\x12Z\n" +
+	"\x16endpointing_capability\x18\b \x01(\x0e2#.inference.v1.EndpointingCapabilityR\x15endpointingCapability\"\xbe\x01\n" +
+	"\rStreamRequest\x127\n" +
+	"\x05start\x18\x01 \x01(\v2\x1f.inference.v1.StreamStartConfigH\x00R\x05start\x120\n" +
+	"\x05audio\x18\x02 \x01(\v2\x18.inference.v1.AudioChunkH\x00R\x05audio\x127\n" +
+	"\acontrol\x18\x03 \x01(\v2\x1b.inference.v1.StreamControlH\x00R\acontrolB\t\n" +
+	"\apayload\"\xe4\x01\n" +
+	"\x11StreamStartConfig\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
+	"\vsample_rate\x18\x02 \x01(\x05R\n" +
+	"sampleRate\x12#\n" +
+	"\rlanguage_code\x18\x03 \x01(\tR\flanguageCode\x12&\n" +
+	"\x04task\x18\x04 \x01(\x0e2\x12.inference.v1.TaskR\x04task\x12B\n" +
+	"\x0edecode_options\x18\x05 \x01(\v2\x1b.inference.v1.DecodeOptionsR\rdecodeOptions\"T\n" +
+	"\n" +
+	"AudioChunk\x12'\n" +
+	"\x0fsequence_number\x18\x01 \x01(\x04R\x0esequenceNumber\x12\x1d\n" +
+	"\n" +
+	"audio_data\x18\x02 \x01(\fR\taudioData\"\x91\x01\n" +
+	"\rStreamControl\x124\n" +
+	"\x04kind\x18\x01 \x01(\x0e2 .inference.v1.StreamControl.KindR\x04kind\"J\n" +
+	"\x04Kind\x12\x14\n" +
+	"\x10KIND_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17KIND_FINALIZE_UTTERANCE\x10\x01\x12\x0f\n" +
+	"\vKIND_CANCEL\x10\x02\"\x90\x01\n" +
+	"\x0eStreamResponse\x12@\n" +
+	"\n" +
+	"hypothesis\x18\x01 \x01(\v2\x1e.inference.v1.StreamHypothesisH\x00R\n" +
+	"hypothesis\x121\n" +
+	"\x05error\x18\x02 \x01(\v2\x19.inference.v1.StreamErrorH\x00R\x05errorB\t\n" +
+	"\apayload\"\x87\x02\n" +
+	"\x10StreamHypothesis\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x12\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\x12%\n" +
+	"\x0ecommitted_text\x18\x03 \x01(\tR\rcommittedText\x12#\n" +
+	"\runstable_text\x18\x04 \x01(\tR\funstableText\x12\x19\n" +
+	"\bis_final\x18\x05 \x01(\bR\aisFinal\x12\x1b\n" +
+	"\tstart_sec\x18\x06 \x01(\x01R\bstartSec\x12\x17\n" +
+	"\aend_sec\x18\a \x01(\x01R\x06endSec\x12#\n" +
+	"\rlanguage_code\x18\b \x01(\tR\flanguageCode\"W\n" +
+	"\vStreamError\x12.\n" +
+	"\x04code\x18\x01 \x01(\x0e2\x1a.common.v1.PluginErrorCodeR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage*E\n" +
 	"\x04Task\x12\x14\n" +
 	"\x10TASK_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fTASK_TRANSCRIBE\x10\x01\x12\x12\n" +
-	"\x0eTASK_TRANSLATE\x10\x022\xf8\x01\n" +
+	"\x0eTASK_TRANSLATE\x10\x02*i\n" +
+	"\rStreamingMode\x12\x1e\n" +
+	"\x1aSTREAMING_MODE_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19STREAMING_MODE_BATCH_ONLY\x10\x01\x12\x19\n" +
+	"\x15STREAMING_MODE_NATIVE\x10\x02*\xb0\x01\n" +
+	"\x15EndpointingCapability\x12&\n" +
+	"\"ENDPOINTING_CAPABILITY_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bENDPOINTING_CAPABILITY_NONE\x10\x01\x12$\n" +
+	" ENDPOINTING_CAPABILITY_DETECTION\x10\x02\x12(\n" +
+	"$ENDPOINTING_CAPABILITY_AUTO_FINALIZE\x10\x032\xcb\x02\n" +
 	"\x0fInferencePlugin\x12O\n" +
 	"\n" +
-	"Transcribe\x12\x1f.inference.v1.TranscribeRequest\x1a .inference.v1.TranscribeResponse\x12N\n" +
+	"Transcribe\x12\x1f.inference.v1.TranscribeRequest\x1a .inference.v1.TranscribeResponse\x12Q\n" +
+	"\x10TranscribeStream\x12\x1b.inference.v1.StreamRequest\x1a\x1c.inference.v1.StreamResponse(\x010\x01\x12N\n" +
 	"\x0fGetCapabilities\x12\x16.google.protobuf.Empty\x1a#.inference.v1.InferenceCapabilities\x12D\n" +
 	"\vHealthCheck\x12\x16.google.protobuf.Empty\x1a\x1d.common.v1.PluginHealthStatusB<Z:github.com/speechmux/proto/gen/go/inference/v1;inferencev1b\x06proto3"
 
@@ -639,35 +1364,58 @@ func file_inference_v1_inference_proto_rawDescGZIP() []byte {
 	return file_inference_v1_inference_proto_rawDescData
 }
 
-var file_inference_v1_inference_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_inference_v1_inference_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_inference_v1_inference_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_inference_v1_inference_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_inference_v1_inference_proto_goTypes = []any{
 	(Task)(0),                     // 0: inference.v1.Task
-	(*TranscribeRequest)(nil),     // 1: inference.v1.TranscribeRequest
-	(*TranscribeResponse)(nil),    // 2: inference.v1.TranscribeResponse
-	(*DecodeOptions)(nil),         // 3: inference.v1.DecodeOptions
-	(*Segment)(nil),               // 4: inference.v1.Segment
-	(*InferenceCapabilities)(nil), // 5: inference.v1.InferenceCapabilities
-	(v1.PluginErrorCode)(0),       // 6: common.v1.PluginErrorCode
-	(*emptypb.Empty)(nil),         // 7: google.protobuf.Empty
-	(*v1.PluginHealthStatus)(nil), // 8: common.v1.PluginHealthStatus
+	(StreamingMode)(0),            // 1: inference.v1.StreamingMode
+	(EndpointingCapability)(0),    // 2: inference.v1.EndpointingCapability
+	(StreamControl_Kind)(0),       // 3: inference.v1.StreamControl.Kind
+	(*TranscribeRequest)(nil),     // 4: inference.v1.TranscribeRequest
+	(*TranscribeResponse)(nil),    // 5: inference.v1.TranscribeResponse
+	(*DecodeOptions)(nil),         // 6: inference.v1.DecodeOptions
+	(*Segment)(nil),               // 7: inference.v1.Segment
+	(*InferenceCapabilities)(nil), // 8: inference.v1.InferenceCapabilities
+	(*StreamRequest)(nil),         // 9: inference.v1.StreamRequest
+	(*StreamStartConfig)(nil),     // 10: inference.v1.StreamStartConfig
+	(*AudioChunk)(nil),            // 11: inference.v1.AudioChunk
+	(*StreamControl)(nil),         // 12: inference.v1.StreamControl
+	(*StreamResponse)(nil),        // 13: inference.v1.StreamResponse
+	(*StreamHypothesis)(nil),      // 14: inference.v1.StreamHypothesis
+	(*StreamError)(nil),           // 15: inference.v1.StreamError
+	(v1.PluginErrorCode)(0),       // 16: common.v1.PluginErrorCode
+	(*emptypb.Empty)(nil),         // 17: google.protobuf.Empty
+	(*v1.PluginHealthStatus)(nil), // 18: common.v1.PluginHealthStatus
 }
 var file_inference_v1_inference_proto_depIdxs = []int32{
-	0, // 0: inference.v1.TranscribeRequest.task:type_name -> inference.v1.Task
-	3, // 1: inference.v1.TranscribeRequest.decode_options:type_name -> inference.v1.DecodeOptions
-	4, // 2: inference.v1.TranscribeResponse.segments:type_name -> inference.v1.Segment
-	6, // 3: inference.v1.TranscribeResponse.error_code:type_name -> common.v1.PluginErrorCode
-	1, // 4: inference.v1.InferencePlugin.Transcribe:input_type -> inference.v1.TranscribeRequest
-	7, // 5: inference.v1.InferencePlugin.GetCapabilities:input_type -> google.protobuf.Empty
-	7, // 6: inference.v1.InferencePlugin.HealthCheck:input_type -> google.protobuf.Empty
-	2, // 7: inference.v1.InferencePlugin.Transcribe:output_type -> inference.v1.TranscribeResponse
-	5, // 8: inference.v1.InferencePlugin.GetCapabilities:output_type -> inference.v1.InferenceCapabilities
-	8, // 9: inference.v1.InferencePlugin.HealthCheck:output_type -> common.v1.PluginHealthStatus
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	0,  // 0: inference.v1.TranscribeRequest.task:type_name -> inference.v1.Task
+	6,  // 1: inference.v1.TranscribeRequest.decode_options:type_name -> inference.v1.DecodeOptions
+	7,  // 2: inference.v1.TranscribeResponse.segments:type_name -> inference.v1.Segment
+	16, // 3: inference.v1.TranscribeResponse.error_code:type_name -> common.v1.PluginErrorCode
+	1,  // 4: inference.v1.InferenceCapabilities.streaming_mode:type_name -> inference.v1.StreamingMode
+	2,  // 5: inference.v1.InferenceCapabilities.endpointing_capability:type_name -> inference.v1.EndpointingCapability
+	10, // 6: inference.v1.StreamRequest.start:type_name -> inference.v1.StreamStartConfig
+	11, // 7: inference.v1.StreamRequest.audio:type_name -> inference.v1.AudioChunk
+	12, // 8: inference.v1.StreamRequest.control:type_name -> inference.v1.StreamControl
+	0,  // 9: inference.v1.StreamStartConfig.task:type_name -> inference.v1.Task
+	6,  // 10: inference.v1.StreamStartConfig.decode_options:type_name -> inference.v1.DecodeOptions
+	3,  // 11: inference.v1.StreamControl.kind:type_name -> inference.v1.StreamControl.Kind
+	14, // 12: inference.v1.StreamResponse.hypothesis:type_name -> inference.v1.StreamHypothesis
+	15, // 13: inference.v1.StreamResponse.error:type_name -> inference.v1.StreamError
+	16, // 14: inference.v1.StreamError.code:type_name -> common.v1.PluginErrorCode
+	4,  // 15: inference.v1.InferencePlugin.Transcribe:input_type -> inference.v1.TranscribeRequest
+	9,  // 16: inference.v1.InferencePlugin.TranscribeStream:input_type -> inference.v1.StreamRequest
+	17, // 17: inference.v1.InferencePlugin.GetCapabilities:input_type -> google.protobuf.Empty
+	17, // 18: inference.v1.InferencePlugin.HealthCheck:input_type -> google.protobuf.Empty
+	5,  // 19: inference.v1.InferencePlugin.Transcribe:output_type -> inference.v1.TranscribeResponse
+	13, // 20: inference.v1.InferencePlugin.TranscribeStream:output_type -> inference.v1.StreamResponse
+	8,  // 21: inference.v1.InferencePlugin.GetCapabilities:output_type -> inference.v1.InferenceCapabilities
+	18, // 22: inference.v1.InferencePlugin.HealthCheck:output_type -> common.v1.PluginHealthStatus
+	19, // [19:23] is the sub-list for method output_type
+	15, // [15:19] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_inference_v1_inference_proto_init() }
@@ -675,13 +1423,22 @@ func file_inference_v1_inference_proto_init() {
 	if File_inference_v1_inference_proto != nil {
 		return
 	}
+	file_inference_v1_inference_proto_msgTypes[5].OneofWrappers = []any{
+		(*StreamRequest_Start)(nil),
+		(*StreamRequest_Audio)(nil),
+		(*StreamRequest_Control)(nil),
+	}
+	file_inference_v1_inference_proto_msgTypes[9].OneofWrappers = []any{
+		(*StreamResponse_Hypothesis)(nil),
+		(*StreamResponse_Error)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inference_v1_inference_proto_rawDesc), len(file_inference_v1_inference_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   5,
+			NumEnums:      4,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
