@@ -22,7 +22,7 @@ jobs:
 
       - name: Install protoc
         run: |
-          PB_VERSION=27.1
+          PB_VERSION=7.34.0
           curl -sLo /tmp/protoc.zip \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PB_VERSION}/protoc-${PB_VERSION}-linux-x86_64.zip"
           sudo unzip -o /tmp/protoc.zip bin/protoc 'include/*' -d /usr/local
@@ -38,7 +38,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python protoc tools
-        run: pip install grpcio-tools
+        run: pip install grpcio-tools==1.78.0
 
       - name: Generate code
         run: make generate PYTHON=python3
