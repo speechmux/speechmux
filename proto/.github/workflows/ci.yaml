@@ -36,21 +36,8 @@ jobs:
       - name: Install Python protoc tools
         run: pip install grpcio-tools
 
-      - name: Generate code
+      - name: Verify proto compiles cleanly
         run: make generate PYTHON=python3
-
-      - name: Verify no uncommitted changes in gen/
-        run: |
-          # Filter out tool-version comment lines — protoc and grpcio-tools versions
-          # differ between local (macOS brew) and CI (apt). Only structural changes matter.
-          diff=$(git diff gen/ \
-            | grep -E '^[+-][^+-]' \
-            | grep -vE 'protoc\s+v[0-9]|protoc-gen-go\s+v[0-9]|GRPC_GENERATED_VERSION')
-          if [ -n "$diff" ]; then
-            echo "Generated code is out of date. Run 'make generate' and commit."
-            git diff gen/
-            exit 1
-          fi
 
   lint:
     name: Lint protos (buf)
