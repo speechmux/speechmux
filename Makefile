@@ -6,7 +6,7 @@ PYTHON      ?= $(abspath $(VENV)/bin/python3)
 UV          ?= uv
 GO          ?= go
 CADDY       ?= caddy
-TAILSCALE   ?= tailscale
+TAILSCALE   ?= /Applications/Tailscale.app/Contents/MacOS/Tailscale
 CORE_GRPC_PORT := 50051
 CORE_HTTP_PORT := 8090
 CORE_WS_PORT   := 8091
@@ -15,7 +15,7 @@ WEB_NEXT_PORT  := 3020
 CADDY_PORT     := 8443
 CADDY_NOTLS_PORT := 8080
 
-.PHONY: setup proto build run run-all run-dummy stop stop-all status logs test loadtest clean run-web stop-web run-web-caddy stop-caddy run-all-caddy caddy-trust run-all-tailscale stop-tailscale _ensure-dirs _wait-socks _wait-socks-dummy run-core-dummy clone-base clone-stt clone-vad clone-web clone-cli
+.PHONY: setup proto build run run-all run-dummy stop stop-all status logs test loadtest clean run-web stop-web run-web-caddy stop-caddy run-all-caddy caddy-trust run-all-tailscale stop-tailscale _ensure-dirs _wait-socks _wait-socks-dummy run-core-dummy run-stt run-stt-sherpa run-stt-mlx clone-base clone-stt clone-vad clone-web clone-cli
 
 # ── Clone ──────────────────────────────────────────────────────────────────
 # Clone a repo only if the directory does not already exist.
@@ -110,24 +110,31 @@ _ensure-dirs:
 	@mkdir -p $(SOCKET_DIR) $(PIDS_DIR) $(LOGS_DIR)
 
 _wait-socks:
-	@echo "Waiting for plugin sockets (up to 60s)..."
-	@for i in $$(seq 1 60); do \
-		vad_ok=0; stt_ok=0; stt_name=""; \
-		[ -S $(SOCKET_DIR)/vad.sock ] && vad_ok=1; \
-		for s in $(SOCKET_DIR)/stt*.sock; do \
-			if [ -S "$$s" ]; then \
-				stt_ok=1; \
-				stt_name=$$(basename "$$s"); \
-				break; \
+	@echo "Waiting for plugin sockets (up to 60s)..."; \
+	sherpa_skip=0; \
+	for i in $$(seq 1 60); do \
+		if [ $$sherpa_skip -eq 0 ] && [ -f $(PIDS_DIR)/stt-sherpa.pid ]; then \
+			if ! kill -0 $$(cat $(PIDS_DIR)/stt-sherpa.pid) 2>/dev/null; then \
+				sherpa_skip=1; \
+				echo "  WARNING: stt-sherpa crashed — skipping (last lines of $(LOGS_DIR)/stt-sherpa.log):"; \
+				tail -5 $(LOGS_DIR)/stt-sherpa.log 2>/dev/null | sed 's/^/    /'; \
+				rm -f $(PIDS_DIR)/stt-sherpa.pid; \
 			fi; \
-		done; \
-		if [ $$vad_ok -eq 1 ] && [ $$stt_ok -eq 1 ]; then \
+		fi; \
+		vad_ok=0; mlx_ok=0; sherpa_ok=$$sherpa_skip; \
+		[ -S $(SOCKET_DIR)/vad.sock ]        && vad_ok=1; \
+		[ -S $(SOCKET_DIR)/stt-mlx.sock ]    && mlx_ok=1; \
+		[ -S $(SOCKET_DIR)/stt-sherpa.sock ] && sherpa_ok=1; \
+		if [ $$vad_ok -eq 1 ] && [ $$mlx_ok -eq 1 ] && [ $$sherpa_ok -eq 1 ]; then \
 			echo "  vad.sock: ready"; \
-			echo "  $$stt_name: ready"; \
+			echo "  stt-mlx.sock: ready"; \
+			[ -S $(SOCKET_DIR)/stt-sherpa.sock ] && echo "  stt-sherpa.sock: ready"; \
+			[ $$sherpa_skip -eq 1 ] && echo "  stt-sherpa.sock: skipped (crashed)"; \
 			exit 0; \
 		fi; \
-		[ $$vad_ok -eq 0 ] && echo "  [$$i/60] waiting for vad.sock..."; \
-		[ $$stt_ok -eq 0 ] && echo "  [$$i/60] waiting for stt*.sock..."; \
+		[ $$vad_ok -eq 0 ]    && echo "  [$$i/60] waiting for vad.sock..."; \
+		[ $$mlx_ok -eq 0 ]    && echo "  [$$i/60] waiting for stt-mlx.sock..."; \
+		[ $$sherpa_ok -eq 0 ] && echo "  [$$i/60] waiting for stt-sherpa.sock..."; \
 		sleep 1; \
 	done; \
 	echo "ERROR: plugin sockets not ready after 60s. Check logs in $(LOGS_DIR)."; \
@@ -180,7 +187,7 @@ endef
 # ── Run (real engines) ──
 
 run: _ensure-dirs run-vad run-stt _wait-socks run-core
-	@echo "All processes started. Use 'make status' to check."
+	@echo "All processes started (sherpa-onnx + mlx-whisper). Use 'make status' to check."
 
 run-all: run run-web
 	@echo "Full stack started (backend + web). Use 'make status' to check."
@@ -193,13 +200,23 @@ run-vad:
 		>> $(LOGS_DIR)/vad.log 2>&1 & echo $$! > $(PIDS_DIR)/vad.pid
 	@echo "VAD Plugin started (pid=$$(cat $(PIDS_DIR)/vad.pid), log=$(LOGS_DIR)/vad.log)"
 
-run-stt:
-	$(call _check-running,stt)
+run-stt: run-stt-sherpa run-stt-mlx
+
+run-stt-sherpa:
+	$(call _check-running,stt-sherpa)
 	cd plugin-stt && \
 	$(PYTHON) -m speechmux_plugin_stt.main \
-		--config config/inference.yaml \
-		>> $(LOGS_DIR)/stt.log 2>&1 & echo $$! > $(PIDS_DIR)/stt.pid
-	@echo "STT Plugin started (pid=$$(cat $(PIDS_DIR)/stt.pid), log=$(LOGS_DIR)/stt.log)"
+		--config config/inference-onnx.yaml \
+		>> $(LOGS_DIR)/stt-sherpa.log 2>&1 & echo $$! > $(PIDS_DIR)/stt-sherpa.pid
+	@echo "STT Plugin (sherpa-onnx) started (pid=$$(cat $(PIDS_DIR)/stt-sherpa.pid), log=$(LOGS_DIR)/stt-sherpa.log)"
+
+run-stt-mlx:
+	$(call _check-running,stt-mlx)
+	cd plugin-stt && \
+	$(PYTHON) -m speechmux_plugin_stt.main \
+		--config config/inference-mlx.yaml \
+		>> $(LOGS_DIR)/stt-mlx.log 2>&1 & echo $$! > $(PIDS_DIR)/stt-mlx.pid
+	@echo "STT Plugin (mlx-whisper) started (pid=$$(cat $(PIDS_DIR)/stt-mlx.pid), log=$(LOGS_DIR)/stt-mlx.log)"
 
 run-core:
 	$(call _check-running,core)
@@ -239,12 +256,12 @@ run-dummy-vad:
 	@echo "VAD Plugin (dummy) started (pid=$$(cat $(PIDS_DIR)/vad.pid), log=$(LOGS_DIR)/vad.log)"
 
 run-dummy-stt:
-	$(call _check-running,stt)
+	$(call _check-running,stt-dummy)
 	cd plugin-stt && \
 	$(PYTHON) -m speechmux_plugin_stt.main \
 		--config config/inference-dummy.yaml \
-		>> $(LOGS_DIR)/stt.log 2>&1 & echo $$! > $(PIDS_DIR)/stt.pid
-	@echo "STT Plugin (dummy) started (pid=$$(cat $(PIDS_DIR)/stt.pid), log=$(LOGS_DIR)/stt.log)"
+		>> $(LOGS_DIR)/stt-dummy.log 2>&1 & echo $$! > $(PIDS_DIR)/stt-dummy.pid
+	@echo "STT Plugin (dummy) started (pid=$$(cat $(PIDS_DIR)/stt-dummy.pid), log=$(LOGS_DIR)/stt-dummy.log)"
 
 # ── Status / Stop ──
 
@@ -255,7 +272,7 @@ logs:
 	@echo "Usage: tail -f $(LOGS_DIR)/<name>.log"
 
 status:
-	@for name in vad stt core web-api web-next caddy; do \
+	@for name in vad stt-sherpa stt-mlx stt-dummy core web-api web-next caddy; do \
 		if [ -f $(PIDS_DIR)/$$name.pid ] && kill -0 $$(cat $(PIDS_DIR)/$$name.pid) 2>/dev/null; then \
 			echo "$$name: running (pid=$$(cat $(PIDS_DIR)/$$name.pid))"; \
 		else \
@@ -264,7 +281,7 @@ status:
 	done
 
 stop:
-	@for name in core stt vad; do \
+	@for name in core stt-sherpa stt-mlx stt-dummy vad; do \
 		if [ -f $(PIDS_DIR)/$$name.pid ]; then \
 			pid=$$(cat $(PIDS_DIR)/$$name.pid); \
 			pkill -P $$pid 2>/dev/null || true; \
