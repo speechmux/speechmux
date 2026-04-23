@@ -4,6 +4,8 @@ A Go-based streaming speech-to-text gateway that orchestrates multiple STT engin
 
 ## Architecture
 
+**Batch engine** (e.g. mlx-whisper) — VAD drives utterance boundaries; Core extracts segments and sends each as a single Transcribe RPC:
+
 ```mermaid
 flowchart TD
     subgraph Client
@@ -20,36 +22,44 @@ flowchart TD
         RA["ResultAssembler"]
     end
 
-    subgraph VADPluginLayer ["VAD Plugin (Python)"]
-        direction TB
-        VADServicer["StreamVAD servicer"]
-        VADEngine["VADEngine"]
-        VADServicer <--> VADEngine
+    subgraph VADPlugin ["VAD Plugin (Python)"]
+        VADServicer["StreamVAD servicer"] <--> VADEngine["VADEngine</br>(e.g. Silero)"]
     end
 
-    subgraph STTPluginLayer ["STT Plugin (Python)"]
-        direction TB
-        STTServicer["Transcribe servicer"]
-        InferenceEngine["InferenceEngine"]
-        STTServicer <--> InferenceEngine
-    end
-
-    subgraph VADEngineLayer ["VAD Engine Implementations"]
-        SpecifiedVADEngine["Silero<br/>…"]
-    end
-
-    subgraph STTEngineLayer ["STT Engine Implementations"]
-        STTEngine["mlx-whisper<br/>faster-whisper<br/>…"]
+    subgraph STTPlugin ["STT Plugin (Python)"]
+        STTServicer["Transcribe servicer"] <--> InferenceEngine["InferenceEngine</br>(e.g. mlx-whisper)"]
     end
 
     transport -->|"audio"| codecConvert
-    frameAggregator -->|"UDS (StreamVAD)"| VADServicer
+    frameAggregator -->|"UDS</br>(StreamVAD)"| VADServicer
     VADServicer -->|"VADResult + AdvanceWatermark"| EPDC
-    DS -->|"UDS (Transcribe)"| STTServicer
+    DS -->|"UDS</br>(Transcribe)"| STTServicer
     STTServicer -->|"TranscribeResponse"| RA
     RA -->|"committed / unstable text"| transport
-    SpecifiedVADEngine -.->|"extends"| VADEngine
-    STTEngine -.->|"extends"| InferenceEngine
+```
+
+**Streaming engine** (e.g. sherpa-onnx) — VAD and ring buffer are bypassed; audio flows directly to the STT plugin which manages its own utterance boundaries:
+
+```mermaid
+flowchart TD
+    subgraph Client
+        transport["gRPC / WebSocket"]
+    end
+
+    subgraph Core ["Core (Go)"]
+        codecConvert["codecConvert"] --> pcmCh(["<i>ch: pcm</i>"])
+        pcmCh --> frameAggregator["frameAggregator"]
+        RA["ResultAssembler"]
+    end
+
+    subgraph STTPlugin ["STT Plugin (Python)"]
+        STTServicer["TranscribeStream servicer"] <--> StreamingEngine["StreamingInferenceEngine</br>(e.g. sherpa-onnx)"]
+    end
+
+    transport -->|"audio"| codecConvert
+    frameAggregator -->|"UDS</br>(TranscribeStream)"| STTServicer
+    STTServicer -->|"StreamResponse</br>(partial / final)"| RA
+    RA -->|"committed / unstable text"| transport
 ```
 
 - **Frame aggregation**: Core collects client audio chunks (e.g. 20 ms) and re-frames them to the VAD plugin's `optimal_frame_ms` (e.g. 32 ms for Silero) before sending, reducing IPC overhead.
@@ -92,13 +102,11 @@ Each component lives in its own repository under the `speechmux` GitHub organiza
 | `core` | Go | gRPC/WS server, session management, EPD, decode scheduling, routing |
 | `plugin-vad` | Python | VAD plugin base (servicer, VADEngine Protocol, Dummy engine) |
 | `plugin-vad-silero` | Python | Silero VAD v5 engine |
-| `plugin-stt` | Python | STT plugin base (servicer, InferenceEngine Protocol, Dummy engine) |
+| `plugin-stt` | Python | STT plugin base (servicer, InferenceEngine + StreamingInferenceEngine Protocols, Dummy engine) |
 | `plugin-stt-mlx-whisper` | Python | mlx-whisper engine (MLX, Apple Silicon) |
-| `plugin-stt-faster-whisper` | Python | faster-whisper engine (CTranslate2, CPU/CUDA) |
-| `plugin-stt-torch-whisper` | Python | torch-whisper engine (PyTorch, CPU/MPS/CUDA) |
+| `plugin-stt-sherpa-onnx` | Python | sherpa-onnx Zipformer streaming engine (CPU/ARM, any language) |
 | `client-cli` | Python | CLI client (file, batch, microphone) |
 | `client-web` | TS/Python | Next.js 15 frontend + FastAPI WebSocket proxy |
-| `deploy` | HCL | HashiCorp Nomad job specs for macOS Metal/MPS deployment |
 
 ## Quick Start
 
@@ -124,9 +132,10 @@ make clone-base                    # proto, core, plugin-vad, plugin-stt
 # VAD engine — pick one
 make clone-vad IMPL=silero         # plugin-vad-silero
 
-# STT engine — pick one (run again to add more)
-make clone-stt IMPL=mlx-whisper    # Apple Silicon
-make clone-stt IMPL=faster-whisper # CPU / CUDA
+# STT engine — pick one or more (run again to add more)
+make clone-stt IMPL=mlx-whisper    # Apple Silicon (MLX)
+make clone-stt IMPL=sherpa-onnx    # CPU / ARM (streaming Zipformer)
+make clone-stt IMPL=faster-whisper # CPU / CUDA (CTranslate2)
 
 # Clients (optional)
 make clone-web                     # client-web
@@ -173,7 +182,7 @@ mkdir -p /tmp/speechmux
     --config plugin-vad/config/vad.yaml &
 
 .venv/bin/python3 -m speechmux_plugin_stt.main \
-    --config plugin-stt/config/inference.yaml &
+    --config plugin-stt/config/inference-mlx.yaml &
 
 core/bin/speechmux-core \
     --config core/config/core.yaml \
@@ -227,7 +236,8 @@ All configuration is YAML-based. See each file for detailed inline comments.
 | `core/config/plugins.yaml` | VAD/inference plugin endpoints, routing mode, health check intervals |
 | `plugin-vad/config/vad.yaml` | VAD socket, engine, log level, concurrency, Silero model thresholds |
 | `plugin-vad/config/vad-dummy.yaml` | VAD dummy engine config for load testing |
-| `plugin-stt/config/inference.yaml` | STT socket, engine, log level, concurrency, model selection, decode hyperparameters |
+| `plugin-stt/config/inference-onnx.yaml` | STT socket + sherpa-onnx Zipformer engine config (model paths, EPD, language routing) |
+| `plugin-stt/config/inference-mlx.yaml` | STT socket + mlx-whisper engine config (HuggingFace model, compute type) |
 | `plugin-stt/config/inference-dummy.yaml` | STT dummy engine config for load testing |
 
 ### Decode Profiles
