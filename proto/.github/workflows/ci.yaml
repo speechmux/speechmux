@@ -21,11 +21,7 @@ jobs:
           go-version: "1.23"
 
       - name: Install protoc
-        run: |
-          PB_VERSION=7.34.0
-          curl -sLo /tmp/protoc.zip \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PB_VERSION}/protoc-${PB_VERSION}-linux-x86_64.zip"
-          sudo unzip -o /tmp/protoc.zip bin/protoc 'include/*' -d /usr/local
+        run: sudo apt-get install -y protobuf-compiler
 
       - name: Install Go protoc plugins
         run: |
@@ -38,15 +34,23 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python protoc tools
-        run: pip install grpcio-tools==1.78.0
+        run: pip install grpcio-tools
 
       - name: Generate code
         run: make generate PYTHON=python3
 
       - name: Verify no uncommitted changes in gen/
         run: |
-          git diff --exit-code gen/ || \
-            (echo "Generated code is out of date. Run 'make generate' and commit." && exit 1)
+          # Filter out tool-version comment lines — protoc and grpcio-tools versions
+          # differ between local (macOS brew) and CI (apt). Only structural changes matter.
+          diff=$(git diff gen/ \
+            | grep -E '^[+-][^+-]' \
+            | grep -vE 'protoc\s+v[0-9]|protoc-gen-go\s+v[0-9]|GRPC_GENERATED_VERSION')
+          if [ -n "$diff" ]; then
+            echo "Generated code is out of date. Run 'make generate' and commit."
+            git diff gen/
+            exit 1
+          fi
 
   lint:
     name: Lint protos (buf)
