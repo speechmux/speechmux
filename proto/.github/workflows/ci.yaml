@@ -41,7 +41,7 @@ jobs:
         run: pip install grpcio-tools
 
       - name: Generate code
-        run: make generate
+        run: make generate PYTHON=python3
 
       - name: Verify no uncommitted changes in gen/
         run: |
