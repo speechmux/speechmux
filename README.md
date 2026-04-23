@@ -96,17 +96,34 @@ the unstable segment.
 
 Each component lives in its own repository under the `speechmux` GitHub organization.
 
+### Infrastructure
+
 | Repo | Language | Role |
 |------|----------|------|
-| `proto` | Protobuf | Proto definitions + generated Go/Python code (single source of truth) |
-| `core` | Go | gRPC/WS server, session management, EPD, decode scheduling, routing |
-| `plugin-vad` | Python | VAD plugin base (servicer, VADEngine Protocol, Dummy engine) |
-| `plugin-vad-silero` | Python | Silero VAD v5 engine |
-| `plugin-stt` | Python | STT plugin base (servicer, InferenceEngine + StreamingInferenceEngine Protocols, Dummy engine) |
-| `plugin-stt-mlx-whisper` | Python | mlx-whisper engine (MLX, Apple Silicon) |
-| `plugin-stt-sherpa-onnx` | Python | sherpa-onnx Zipformer streaming engine (CPU/ARM, any language) |
-| `client-cli` | Python | CLI client (file, batch, microphone) |
-| `client-web` | TS/Python | Next.js 15 frontend + FastAPI WebSocket proxy |
+| [`proto`](https://github.com/speechmux/proto) | Protobuf | Proto definitions + generated Go/Python code (single source of truth) |
+| [`core`](https://github.com/speechmux/core) | Go | gRPC/WS server, session management, EPD, decode scheduling, routing |
+
+### VAD Plugins
+
+| Repo | Language | Role |
+|------|----------|------|
+| [`plugin-vad`](https://github.com/speechmux/plugin-vad) | Python | VAD plugin base (servicer, VADEngine Protocol, Dummy engine) |
+| [`plugin-vad-silero`](https://github.com/speechmux/plugin-vad-silero) | Python | Silero VAD engine |
+
+### STT Plugins
+
+| Repo | Language | Role |
+|------|----------|------|
+| [`plugin-stt`](https://github.com/speechmux/plugin-stt) | Python | STT plugin base (servicer, InferenceEngine + StreamingInferenceEngine Protocols, Dummy engine) |
+| [`plugin-stt-mlx-whisper`](https://github.com/speechmux/plugin-stt-mlx-whisper) | Python | mlx-whisper engine (MLX, Apple Silicon) |
+| [`plugin-stt-sherpa-onnx`](https://github.com/speechmux/plugin-stt-sherpa-onnx) | Python | sherpa-onnx Zipformer streaming engine (CPU/ARM, any language) |
+
+### Clients
+
+| Repo | Language | Role |
+|------|----------|------|
+| [`client-web`](https://github.com/speechmux/client-web) | TS/Python | Next.js 15 frontend + FastAPI WebSocket proxy |
+| [`client-cli`](https://github.com/speechmux/client-cli) | Python | CLI client (file, batch, microphone) |
 
 ## Quick Start
 
