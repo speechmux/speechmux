@@ -178,14 +178,12 @@ func (DecodeProfile) EnumDescriptor() ([]byte, []int) {
 }
 
 // StreamMode controls backpressure policy.
-// REALTIME: microphone input — apply backpressure to slow the sender.
-// BATCH:    file upload — allow burst; buffer aggressively.
 type StreamMode int32
 
 const (
 	StreamMode_STREAM_MODE_UNSPECIFIED StreamMode = 0
-	StreamMode_STREAM_MODE_REALTIME    StreamMode = 1
-	StreamMode_STREAM_MODE_BATCH       StreamMode = 2
+	StreamMode_STREAM_MODE_REALTIME    StreamMode = 1 // Drop oldest audio when buffer full (prevents mic stall in live capture)
+	StreamMode_STREAM_MODE_BATCH       StreamMode = 2 // Backpressure the sender via HTTP/2 flow control (for file upload)
 )
 
 // Enum value maps for StreamMode.
@@ -815,7 +813,10 @@ type RecognitionConfig struct {
 	LanguageCode  string                 `protobuf:"bytes,1,opt,name=language_code,json=languageCode,proto3" json:"language_code,omitempty"` // BCP-47 (e.g. "ko", "en"). Empty = auto-detect.
 	Task          Task                   `protobuf:"varint,2,opt,name=task,proto3,enum=client.v1.Task" json:"task,omitempty"`
 	DecodeProfile DecodeProfile          `protobuf:"varint,3,opt,name=decode_profile,json=decodeProfile,proto3,enum=client.v1.DecodeProfile" json:"decode_profile,omitempty"`
-	EngineHint    string                 `protobuf:"bytes,4,opt,name=engine_hint,json=engineHint,proto3" json:"engine_hint,omitempty"` // Preferred engine id (e.g. "mlx_whisper")
+	// engine_hint requests routing to a named inference endpoint. Value must match
+	// the endpoint `id` in plugins.yaml (e.g. "whisper-mlx"), not the engine name
+	// (e.g. "mlx_whisper"). Falls back to normal routing if the endpoint is unavailable.
+	EngineHint    string `protobuf:"bytes,4,opt,name=engine_hint,json=engineHint,proto3" json:"engine_hint,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

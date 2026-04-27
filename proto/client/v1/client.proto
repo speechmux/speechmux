@@ -104,19 +104,20 @@ enum DecodeProfile {
 }
 
 // StreamMode controls backpressure policy.
-// REALTIME: microphone input — apply backpressure to slow the sender.
-// BATCH:    file upload — allow burst; buffer aggressively.
 enum StreamMode {
   STREAM_MODE_UNSPECIFIED = 0;
-  STREAM_MODE_REALTIME    = 1;
-  STREAM_MODE_BATCH       = 2;
+  STREAM_MODE_REALTIME    = 1; // Drop oldest audio when buffer full (prevents mic stall in live capture)
+  STREAM_MODE_BATCH       = 2; // Backpressure the sender via HTTP/2 flow control (for file upload)
 }
 
 message RecognitionConfig {
   string        language_code  = 1; // BCP-47 (e.g. "ko", "en"). Empty = auto-detect.
   Task          task           = 2;
   DecodeProfile decode_profile = 3;
-  string        engine_hint    = 4; // Preferred engine id (e.g. "mlx_whisper")
+  // engine_hint requests routing to a named inference endpoint. Value must match
+  // the endpoint `id` in plugins.yaml (e.g. "whisper-mlx"), not the engine name
+  // (e.g. "mlx_whisper"). Falls back to normal routing if the endpoint is unavailable.
+  string        engine_hint    = 4;
 }
 
 // ─── VAD configuration ─────────────────────────────────────────────────────
