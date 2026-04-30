@@ -1,0 +1,12 @@
+server:
+  address: "0.0.0.0:50060"          # TCP bind address for Docker. Replaces socket used in Nomad/local mode.
+  engine: silero                     # VAD engine to load.
+  log_level: INFO                    # Logging verbosity: DEBUG | INFO | WARNING | ERROR.
+  max_concurrent_sessions: 50        # Max concurrent StreamVAD sessions. Increase for high-traffic deployments.
+
+engine:
+  silero:
+    threshold: 0.5                   # Speech probability threshold (0.0–1.0). Lower = more sensitive.
+    min_speech_duration_ms: 250      # Minimum speech segment duration (ms). Shorter segments are discarded.
+    min_silence_duration_ms: 100     # Minimum silence duration (ms) before closing a speech segment.
+    optimal_frame_ms: 32             # Frame size fed to Silero (ms). 32ms = 512 samples @ 16kHz.

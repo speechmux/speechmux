@@ -1,0 +1,29 @@
+server:
+  address: "0.0.0.0:50061"              # TCP bind address for Docker. Replaces socket used in Nomad/local mode.
+  engine: sherpa_onnx_zipformer          # Engine to load. Must match a key under engine: below.
+  log_level: INFO                        # Logging verbosity: DEBUG | INFO | WARNING | ERROR.
+  max_concurrent_sessions: 10            # Max concurrent streaming sessions. Tune to CPU core count.
+  log_transcription_text: true           # If true, recognized text is included in INFO-level logs.
+
+engine:
+  sherpa_onnx_zipformer:
+    recognizer:
+      num_threads: 2                     # ONNX Runtime intra-op threads per recognizer instance.
+                                         # Increase for faster inference on multi-core hosts.
+      sample_rate: 16000                 # Input sample rate (Hz). Must match codec.target_sample_rate in core.
+      feature_dim: 80                    # Mel-filterbank feature dimension. Must match model training config.
+
+    endpoint_detection:
+      rule1_min_trailing_silence: 2.4    # Seconds of silence after any speech before endpoint fires.
+      rule2_min_trailing_silence: 1.2    # Seconds of silence after ≥1.0s of confirmed speech.
+      rule3_min_utterance_length: 20.0   # Force-finalize after this many seconds regardless of silence.
+
+    models:
+      default_language: ko               # BCP-47 fallback language when client does not specify.
+      languages:
+        ko:
+          encoder: /models/ko-streaming/encoder-epoch-99-avg-1.int8.onnx  # Path inside container; mount via volume.
+          decoder: /models/ko-streaming/decoder-epoch-99-avg-1.int8.onnx
+          joiner:  /models/ko-streaming/joiner-epoch-99-avg-1.int8.onnx
+          tokens:  /models/ko-streaming/tokens.txt
+        # en/ja: Zipformer2-streaming models not yet downloaded. Add entries once available.

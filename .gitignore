@@ -14,5 +14,9 @@ client-*/
 # Sample audio files (not tracked — no references in docs or Makefile)
 assets/
 
+# Docker
+.env
+models/
+
 # macOS
 .DS_Store

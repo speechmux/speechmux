@@ -1,0 +1,35 @@
+# Applies to the core service build (context: workspace root).
+# Other services use their own subdirectory as context and are unaffected.
+
+# Python virtual environments and caches
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Node modules and Next.js build output
+node_modules/
+**/.next/
+
+# Model files (large; mounted as volumes at runtime)
+plugin-stt-sherpa-onnx/models/
+models/
+
+# Runtime state and logs
+/tmp/
+*.log
+*.pid
+
+# Git and editor metadata
+.git/
+.gitignore
+**/.DS_Store
+
+# Local dev config overrides
+.env
+.env.*
+!.env.example
+
+# Compiled binaries
+core/bin/
