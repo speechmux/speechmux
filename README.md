@@ -38,7 +38,7 @@ flowchart TD
     RA -->|"committed / unstable text"| transport
 ```
 
-**Streaming engine** (e.g. sherpa-onnx) — VAD and ring buffer are bypassed; audio flows directly to the STT plugin. Core's VAD+EPD sends `KIND_FINALIZE_UTTERANCE` to drive utterance boundaries (`endpointing_source: core`):
+**Streaming engine** (e.g. sherpa-onnx) — audio flows continuously to the STT plugin; the ring buffer and batch decode scheduler are bypassed. VAD still runs in parallel: Core's EPD Controller sends `KIND_FINALIZE_UTTERANCE` when silence is detected (`endpointing_source: core`):
 
 ```mermaid
 flowchart TD
