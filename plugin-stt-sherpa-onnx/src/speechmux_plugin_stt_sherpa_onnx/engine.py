@@ -163,7 +163,16 @@ class SherpaOnnxEngine(StreamingInferenceEngine):
         language_code: str = session_config.language_code or ""
         session_id: str = session_config.session_id or ""
         sample_rate: int = session_config.sample_rate or 16000
-        logger.info("stream started session_id=%s language=%s", session_id, language_code)
+        engine_mode = (
+            session_config.endpointing_source
+            == inference_pb2.EndpointingSource.ENDPOINTING_SOURCE_ENGINE
+        )
+        logger.info(
+            "stream started session_id=%s language=%s endpointing=%s",
+            session_id,
+            language_code,
+            "engine" if engine_mode else "core",
+        )
 
         recognizer = self._recognizers.get(language_code)
         online_stream = recognizer.create_stream()
@@ -192,14 +201,23 @@ class SherpaOnnxEngine(StreamingInferenceEngine):
                             )
                         )
 
-                    # is_endpoint() is intentionally NOT checked here.
-                    # endpointing_source=core: Core sends KIND_FINALIZE_UTTERANCE
-                    # to drive utterance boundaries. Checking is_endpoint() here
-                    # would emit spurious is_final=True on every silent frame
-                    # (is_endpoint fires repeatedly without reset), creating
-                    # multiple fake utterances from a single speech segment.
-                    # endpointing_source=engine: would require passing the mode
-                    # in StreamStartConfig; deferred until that proto field exists.
+                    if engine_mode and recognizer.is_endpoint(online_stream):
+                        # Engine-driven endpointing: emit final and reset.
+                        # is_endpoint() returns True repeatedly on silent frames
+                        # so we must reset immediately to avoid re-firing.
+                        if text:
+                            logger.info(
+                                "raw_engine_final session_id=%s text=%s",
+                                session_id,
+                                repr(text[:120]),
+                            )
+                            yield inference_pb2.StreamResponse(
+                                hypothesis=inference_pb2.StreamHypothesis(
+                                    text=text, is_final=True
+                                )
+                            )
+                        recognizer.reset(online_stream)
+                        last_text = ""
 
                 elif request.HasField("control"):
                     kind = request.control.kind
