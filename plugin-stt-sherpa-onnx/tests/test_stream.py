@@ -28,11 +28,19 @@ def _pcm_bytes(n_samples: int = 160, amplitude: int = 8000) -> bytes:
     return struct.pack(f"<{n_samples}h", *([amplitude] * n_samples))
 
 
-def _make_start_config(language_code: str = "ko") -> inference_pb2.StreamStartConfig:
+_EP_CORE = inference_pb2.EndpointingSource.ENDPOINTING_SOURCE_CORE
+_EP_ENGINE = inference_pb2.EndpointingSource.ENDPOINTING_SOURCE_ENGINE
+
+
+def _make_start_config(
+    language_code: str = "ko",
+    endpointing_source: inference_pb2.EndpointingSource = _EP_CORE,
+) -> inference_pb2.StreamStartConfig:
     """Build a StreamStartConfig proto (already extracted from first message).
 
     Args:
         language_code: BCP-47 language code for the session.
+        endpointing_source: Who drives utterance finalization.
 
     Returns:
         StreamStartConfig proto.
@@ -41,14 +49,19 @@ def _make_start_config(language_code: str = "ko") -> inference_pb2.StreamStartCo
         session_id="test-session",
         language_code=language_code,
         sample_rate=16000,
+        endpointing_source=endpointing_source,
     )
 
 
-def _make_start_request(language_code: str = "ko") -> inference_pb2.StreamRequest:
+def _make_start_request(
+    language_code: str = "ko",
+    endpointing_source: inference_pb2.EndpointingSource = _EP_CORE,
+) -> inference_pb2.StreamRequest:
     """Build a StreamRequest with StreamStartConfig payload.
 
     Args:
         language_code: BCP-47 language code for the session.
+        endpointing_source: Who drives utterance finalization.
 
     Returns:
         StreamRequest proto.
@@ -58,6 +71,7 @@ def _make_start_request(language_code: str = "ko") -> inference_pb2.StreamReques
             session_id="test-session",
             language_code=language_code,
             sample_rate=16000,
+            endpointing_source=endpointing_source,
         )
     )
 
@@ -179,7 +193,7 @@ def _run_stream(
 
 
 def test_partial_then_final(mock_sherpa_onnx: MagicMock) -> None:
-    """At least one partial must be emitted before the is_final response."""
+    """At least one partial must be emitted before the is_final response (engine mode)."""
     engine = _build_engine(mock_sherpa_onnx, text="hello")
 
     call_counter = {"count": 0}
@@ -191,7 +205,9 @@ def test_partial_then_final(mock_sherpa_onnx: MagicMock) -> None:
     mock_recognizer = mock_sherpa_onnx.OnlineRecognizer.from_transducer.return_value
     mock_recognizer.is_endpoint.side_effect = _is_endpoint
 
-    requests = [_make_start_request()] + [_make_audio_request(i) for i in range(1, 5)]
+    requests = [_make_start_request(endpointing_source=_EP_ENGINE)] + [
+        _make_audio_request(i) for i in range(1, 5)
+    ]
     responses = _run_stream(engine, requests)
 
     partials = [r for r in responses if not r.hypothesis.is_final]
@@ -206,7 +222,7 @@ def test_partial_then_final(mock_sherpa_onnx: MagicMock) -> None:
 
 
 def test_two_utterances(mock_sherpa_onnx: MagicMock) -> None:
-    """Two distinct utterances must each produce an is_final response."""
+    """Two distinct utterances must each produce an is_final response (engine mode)."""
     engine = _build_engine(mock_sherpa_onnx, text="utterance")
 
     call_counter = {"count": 0}
@@ -218,7 +234,9 @@ def test_two_utterances(mock_sherpa_onnx: MagicMock) -> None:
     mock_recognizer = mock_sherpa_onnx.OnlineRecognizer.from_transducer.return_value
     mock_recognizer.is_endpoint.side_effect = _is_endpoint
 
-    requests = [_make_start_request()] + [_make_audio_request(i) for i in range(1, 9)]
+    requests = [_make_start_request(endpointing_source=_EP_ENGINE)] + [
+        _make_audio_request(i) for i in range(1, 9)
+    ]
     responses = _run_stream(engine, requests)
 
     finals = [r for r in responses if r.hypothesis.is_final]
@@ -241,7 +259,7 @@ def test_flush_on_stream_close(mock_sherpa_onnx: MagicMock) -> None:
 
 
 def test_text_resets_after_final(mock_sherpa_onnx: MagicMock) -> None:
-    """After each is_final, the next partial must start fresh."""
+    """After each is_final, the next partial must start fresh (engine mode)."""
     engine = _build_engine(mock_sherpa_onnx, text="first")
 
     mock_recognizer = mock_sherpa_onnx.OnlineRecognizer.from_transducer.return_value
@@ -269,7 +287,9 @@ def test_text_resets_after_final(mock_sherpa_onnx: MagicMock) -> None:
     mock_recognizer.get_result.side_effect = _get_result
     mock_recognizer.reset.side_effect = _reset
 
-    requests = [_make_start_request()] + [_make_audio_request(i) for i in range(1, 6)]
+    requests = [_make_start_request(endpointing_source=_EP_ENGINE)] + [
+        _make_audio_request(i) for i in range(1, 6)
+    ]
     responses = _run_stream(engine, requests)
 
     finals = [r for r in responses if r.hypothesis.is_final]
@@ -355,14 +375,40 @@ def test_empty_stream_returns_cleanly(mock_sherpa_onnx: MagicMock) -> None:
 
 
 def test_endpoint_with_empty_text_does_not_emit_final(mock_sherpa_onnx: MagicMock) -> None:
-    """is_endpoint with empty text must reset the stream but not emit any hypothesis."""
+    """is_endpoint with empty text must reset the stream but not emit any hypothesis (engine mode)."""
     engine = _build_engine(mock_sherpa_onnx, text="")
 
     mock_recognizer = mock_sherpa_onnx.OnlineRecognizer.from_transducer.return_value
     mock_recognizer.is_endpoint.return_value = True
 
-    requests = [_make_start_request(), _make_audio_request(1)]
+    requests = [_make_start_request(endpointing_source=_EP_ENGINE), _make_audio_request(1)]
     responses = _run_stream(engine, requests)
 
     assert responses == [], f"empty-text endpoint must not emit any response: {responses}"
     mock_recognizer.reset.assert_called()
+
+
+def test_core_mode_ignores_is_endpoint(mock_sherpa_onnx: MagicMock) -> None:
+    """In core mode, is_endpoint() must never be called — Core drives finalization.
+
+    The only is_final allowed is the end-of-stream flush; no mid-stream auto-finalize.
+    """
+    engine = _build_engine(mock_sherpa_onnx, text="hello")
+
+    mock_recognizer = mock_sherpa_onnx.OnlineRecognizer.from_transducer.return_value
+    mock_recognizer.is_endpoint.return_value = True  # would fire in engine mode
+
+    requests = [_make_start_request(endpointing_source=_EP_CORE)] + [
+        _make_audio_request(i) for i in range(1, 4)
+    ]
+    responses = _run_stream(engine, requests)
+
+    # is_endpoint must not be consulted at all in core mode.
+    mock_recognizer.is_endpoint.assert_not_called()
+
+    # The only final is the end-of-stream flush — not mid-stream auto-finalization.
+    # The flush emits exactly one final after the iterator is exhausted.
+    finals = [r for r in responses if r.hypothesis.is_final]
+    assert len(finals) == 1, (
+        f"core mode must produce exactly one final (from flush), got {len(finals)}"
+    )
