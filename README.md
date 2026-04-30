@@ -1,6 +1,6 @@
 # SpeechMux
 
-A Go-based streaming speech-to-text gateway that orchestrates multiple STT engines and VAD plugins. Core (Go) handles session management, routing, end-of-speech detection, backpressure, and fault recovery. VAD and Inference plugins (Python) run as gRPC sidecars over Unix domain sockets.
+A Go-based streaming speech-to-text gateway that orchestrates multiple STT engines and VAD plugins. Core (Go) handles session management, routing, end-of-speech detection, backpressure, and fault recovery. VAD and Inference plugins (Python) run as gRPC sidecars over Unix domain sockets (local) or TCP (Docker).
 
 ## Architecture
 
@@ -31,14 +31,14 @@ flowchart TD
     end
 
     transport -->|"audio"| codecConvert
-    frameAggregator -->|"UDS</br>(StreamVAD)"| VADServicer
+    frameAggregator -->|"UDS / TCP</br>(StreamVAD)"| VADServicer
     VADServicer -->|"VADResult + AdvanceWatermark"| EPDC
-    DS -->|"UDS</br>(Transcribe)"| STTServicer
+    DS -->|"UDS / TCP</br>(Transcribe)"| STTServicer
     STTServicer -->|"TranscribeResponse"| RA
     RA -->|"committed / unstable text"| transport
 ```
 
-**Streaming engine** (e.g. sherpa-onnx) — VAD and ring buffer are bypassed; audio flows directly to the STT plugin which manages its own utterance boundaries:
+**Streaming engine** (e.g. sherpa-onnx) — VAD and ring buffer are bypassed; audio flows directly to the STT plugin. Core's VAD+EPD sends `KIND_FINALIZE_UTTERANCE` to drive utterance boundaries (`endpointing_source: core`):
 
 ```mermaid
 flowchart TD
@@ -49,7 +49,13 @@ flowchart TD
     subgraph Core ["Core (Go)"]
         codecConvert["codecConvert"] --> pcmCh(["<i>ch: pcm</i>"])
         pcmCh --> frameAggregator["frameAggregator"]
+        pcmCh --> ARB["AudioRingBuffer"]
+        EPDC["EPD Controller"] -->|"KIND_FINALIZE_UTTERANCE"| STTServicer
         RA["ResultAssembler"]
+    end
+
+    subgraph VADPlugin ["VAD Plugin (Python)"]
+        VADServicer["StreamVAD servicer"] <--> VADEngine["VADEngine</br>(e.g. Silero)"]
     end
 
     subgraph STTPlugin ["STT Plugin (Python)"]
@@ -57,20 +63,21 @@ flowchart TD
     end
 
     transport -->|"audio"| codecConvert
-    frameAggregator -->|"UDS</br>(TranscribeStream)"| STTServicer
+    frameAggregator -->|"UDS / TCP</br>(TranscribeStream)"| STTServicer
+    frameAggregator -->|"UDS / TCP</br>(StreamVAD)"| VADServicer
+    VADServicer -->|"VADResult + AdvanceWatermark"| EPDC
     STTServicer -->|"StreamResponse</br>(partial / final)"| RA
     RA -->|"committed / unstable text"| transport
 ```
 
-- **Frame aggregation**: Core collects client audio chunks (e.g. 20 ms) and re-frames them to the VAD plugin's `optimal_frame_ms` (e.g. 32 ms for Silero) before sending, reducing IPC overhead.
-- **Watermark-based trim**: `AudioRingBuffer.Trim()` only evicts entries with `sequence_number <= confirmedWatermark` AND age exceeding `max_buffer_sec`. Audio not yet confirmed by VAD is never evicted, regardless of age.
-- **Backpressure**: When `AudioRingBuffer.Append()` returns false (buffer full), the pipeline goroutine blocks on `stream.Recv()`, filling the HTTP/2 flow control window and naturally throttling the client. In REALTIME mode, the oldest entry is dropped instead to prevent mic stalls.
-- **Committed / unstable text**: On each partial decode Core computes the Longest Common Prefix (LCP) between the previous and current partial text, then advances `committed_text` to the nearest word boundary (space) or punctuation boundary (`.,?!。、，！？…`) within that LCP. CJK text without spaces commits character-by-character at the LCP boundary. `committed_text` is monotonically increasing — it never shrinks. On final decode: `committed_text = full text`, `unstable_text = ""`.
+- **Frame aggregation**: Core re-frames client audio chunks to the VAD plugin's `optimal_frame_ms` before sending, reducing IPC overhead.
+- **Watermark-based trim**: `AudioRingBuffer.Trim()` only evicts entries with `sequence_number <= confirmedWatermark` AND age exceeding `max_buffer_sec`. Audio not yet confirmed by VAD is never evicted regardless of age.
+- **Backpressure**: When `AudioRingBuffer.Append()` returns false, the pipeline goroutine blocks on `stream.Recv()`, filling the HTTP/2 flow control window and naturally throttling the client. In REALTIME mode the oldest entry is dropped instead to prevent mic stalls.
+- **Committed / unstable text**: On each partial decode, Core computes the Longest Common Prefix (LCP) between the previous and current partial, then advances `committed_text` to the nearest word boundary (space) or punctuation boundary (`.,?!。、，！？…`) within the LCP. CJK text without spaces commits character-by-character at the LCP boundary. `committed_text` is monotonically increasing within an utterance. On `is_final`: `committed_text = full utterance text`, `unstable_text = ""`, and the assembler resets for the next utterance.
 
 ## Streaming Protocol
 
-`StreamingRecognize` is a single bidirectional gRPC stream. The first message must be
-`session_config`; all subsequent messages are `audio` or `signal`.
+`StreamingRecognize` is a single bidirectional gRPC stream. The first message must be `session_config`; all subsequent messages are `audio` or `signal`.
 
 **Client → Core:**
 
@@ -85,12 +92,10 @@ flowchart TD
 | Message | When |
 |---------|------|
 | `session_created` | First response — echoes negotiated audio + recognition config |
-| `recognition_result` | Streamed continuously — `committed_text`, `unstable_text`, `is_final` |
+| `recognition_result` | Streamed continuously — `committed_text`, `unstable_text`, `is_final`, `engine_name` |
 | `stream_error { error_code, retryable }` | On error — stream closes after this |
 
-On `ERR3004` (VAD stream failure) or `ERR3005` (buffer overflow), `retryable: true` — the
-client should open a new stream and replay the last ~2 s of audio (overlap) to avoid losing
-the unstable segment.
+On `ERR3004` (VAD stream failure) or `ERR3005` (buffer overflow), `retryable: true` — the client should open a new stream and replay the last ~2 s of audio to avoid losing the unstable segment.
 
 ## Repositories
 
@@ -100,7 +105,7 @@ Each component lives in its own repository under the `speechmux` GitHub organiza
 
 | Repo | Language | Role |
 |------|----------|------|
-| [`proto`](https://github.com/speechmux/proto) | Protobuf | Proto definitions + generated Go/Python code (single source of truth) |
+| [`proto`](https://github.com/speechmux/proto) | Protobuf | Proto definitions + generated Go/Python code |
 | [`core`](https://github.com/speechmux/core) | Go | gRPC/WS server, session management, EPD, decode scheduling, routing |
 
 ### VAD Plugins
@@ -115,8 +120,8 @@ Each component lives in its own repository under the `speechmux` GitHub organiza
 | Repo | Language | Role |
 |------|----------|------|
 | [`plugin-stt`](https://github.com/speechmux/plugin-stt) | Python | STT plugin base (servicer, InferenceEngine + StreamingInferenceEngine Protocols, Dummy engine) |
-| [`plugin-stt-mlx-whisper`](https://github.com/speechmux/plugin-stt-mlx-whisper) | Python | mlx-whisper engine (MLX, Apple Silicon) |
 | [`plugin-stt-sherpa-onnx`](https://github.com/speechmux/plugin-stt-sherpa-onnx) | Python | sherpa-onnx Zipformer streaming engine (CPU/ARM, any language) |
+| [`plugin-stt-mlx-whisper`](https://github.com/speechmux/plugin-stt-mlx-whisper) | Python | mlx-whisper batch engine (MLX, Apple Silicon) |
 
 ### Clients
 
@@ -133,97 +138,99 @@ Each component lives in its own repository under the `speechmux` GitHub organiza
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) package manager
 - Node.js 22+ (for `client-web` only)
-- Protocol Buffers compiler (`protoc`, for proto regeneration only)
+- Docker + Docker Compose (for Docker deployment)
 
 ### Clone
-
-Clone this workspace root first, then pull the repos you need.
 
 ```bash
 git clone git@github.com:speechmux/speechmux.git
 cd speechmux
 
-# Base layer — always required
 make clone-base                    # proto, core, plugin-vad, plugin-stt
 
-# VAD engine — pick one
 make clone-vad IMPL=silero         # plugin-vad-silero
+make clone-stt IMPL=sherpa-onnx    # CPU / ARM streaming Zipformer (recommended)
+make clone-stt IMPL=mlx-whisper    # Apple Silicon MLX batch engine
 
-# STT engine — pick one or more (run again to add more)
-make clone-stt IMPL=mlx-whisper    # Apple Silicon (MLX)
-make clone-stt IMPL=sherpa-onnx    # CPU / ARM (streaming Zipformer)
-make clone-stt IMPL=faster-whisper # CPU / CUDA (CTranslate2)
-
-# Clients (optional)
-make clone-web                     # client-web
-make clone-cli                     # client-cli
+make clone-web                     # client-web (optional)
+make clone-cli                     # client-cli (optional)
 ```
 
 ### Install
 
 ```bash
-make setup                         # creates .venv (Python 3.13) if absent, then installs
-                                   # proto/gen/python + every cloned plugin
-                                   # and client via uv (plugin-vad, plugin-vad-*,
-                                   # plugin-stt, plugin-stt-*, client-cli,
-                                   # client-web/api — whatever is present on disk)
-                                   # Run 'make proto' only when .proto files change
-                                   # (requires grpcio-tools in the venv)
+make setup    # creates .venv (Python 3.13) + installs all cloned plugins and clients
 
-# Web client frontend (if cloned) — Node side needs a separate install
+# Web client frontend — Node side needs a separate install
 cd client-web/web && npm install && cd ../..
 ```
 
 ### Build
 
 ```bash
-make build   # builds core/bin/speechmux-core
+make build    # builds core/bin/speechmux-core
 ```
 
-### Run
+### Run (native macOS)
+
+All processes are managed by `speechmux-core ctl`. It starts VAD, STT, and Core in declaration order and restarts on failure. Process logs go to `/tmp/speechmux/<name>.log`.
 
 ```bash
-make run       # VAD → STT → Core (sequential startup with socket polling)
-make stop      # graceful shutdown of backend (VAD + STT + Core)
-make stop-all  # stop backend + web client + Caddy
-make status    # check process states
-make logs      # list log files
+make up       # build + start all processes via ctl (workspace.yaml)
+make down     # graceful stop
+make status   # check process states
+make logs     # tail all logs
 ```
 
-Or run each component manually:
+To run components manually instead:
 
 ```bash
-mkdir -p /tmp/speechmux
-
-.venv/bin/python3 -m speechmux_plugin_vad.main \
-    --config plugin-vad/config/vad.yaml &
-
-.venv/bin/python3 -m speechmux_plugin_stt.main \
-    --config plugin-stt/config/inference-mlx.yaml &
-
-core/bin/speechmux-core \
-    --config core/config/core.yaml \
-    --plugins core/config/plugins.yaml
+.venv/bin/python3 -m speechmux_plugin_vad.main --config plugin-vad/config/vad.yaml &
+.venv/bin/python3 -m speechmux_plugin_stt.main --config plugin-stt/config/inference-onnx.yaml &
+core/bin/speechmux-core --config core/config/core.yaml --plugins core/config/plugins.yaml
 ```
 
-### Web Client
+### Run (Docker)
 
 ```bash
-make run-web            # FastAPI proxy + Next.js (plain HTTP, localhost)
-make run-web-caddy      # FastAPI proxy + Next.js + Caddy (HTTPS, mic access)
-make run-all            # Core + web client (plain HTTP)
-make run-all-caddy      # Core + web client + HTTPS via Caddy
-make run-all-tailscale  # Core + web client + Tailscale HTTPS tunnel (remote devices)
-make stop-web           # stop FastAPI proxy + Next.js
-make stop-caddy         # stop Caddy only
+cp .env.example .env           # edit ports, MODELS_DIR, auth tokens as needed
+
+make docker-build              # build all images (DOCKER_PROFILE=sherpa by default)
+make docker-up                 # start stack in background
+make docker-logs               # tail core + vad-silero + stt-sherpa
+make docker-logs-stt           # stt-sherpa only
+make docker-logs-vad           # vad-silero only
+make docker-down               # stop and remove containers
 ```
 
-Run `make caddy-trust` once to install Caddy's local CA into the system trust store
-(needed for `run-web-caddy` to avoid certificate warnings).
+Override the STT profile if using a different engine:
+
+```bash
+make docker-build DOCKER_PROFILE=faster-whisper
+make docker-up    DOCKER_PROFILE=faster-whisper
+```
+
+Models are mounted read-only from `MODELS_DIR` (default: `./plugin-stt-sherpa-onnx/models`). Expected layout:
+
+```
+plugin-stt-sherpa-onnx/models/
+  ko-streaming/
+    encoder-epoch-99-avg-1.int8.onnx
+    decoder-epoch-99-avg-1.int8.onnx
+    joiner-epoch-99-avg-1.int8.onnx
+    tokens.txt
+```
+
+See `make download-models` for instructions.
+
+### Remote Access (Tailscale)
+
+```bash
+scripts/remote-access.sh          # enable HTTPS on port 8444 via Tailscale
+scripts/remote-access.sh stop     # disable
+```
 
 ### Transcribe (CLI)
-
-Requires `client-cli` to be cloned (`make clone-cli`) and installed (`make setup`).
 
 ```bash
 .venv/bin/speechmux file audio.wav --lang ko
@@ -231,40 +238,54 @@ Requires `client-cli` to be cloned (`make clone-cli`) and installed (`make setup
 .venv/bin/speechmux mic --lang ko
 ```
 
-### Load Test (no model required)
-
-```bash
-# One-shot: start dummies + run loadtest + stop everything
-make loadtest
-
-# Or step-by-step for custom loadtest parameters
-make run-dummy  # Dummy VAD + Dummy STT + Core
-cd core && go run ./tools/loadtest/ --sessions 100 --duration 5m
-make stop
-```
-
 ## Configuration
 
-All configuration is YAML-based. See each file for detailed inline comments.
+All configuration is YAML-based. Every variable has an inline comment explaining its purpose and unit.
+
+### Local dev
 
 | File | Purpose |
 |------|---------|
 | `core/config/core.yaml` | Server ports, session limits, stream pipeline tuning, auth, TLS, OTel |
-| `core/config/plugins.yaml` | VAD/inference plugin endpoints, routing mode, health check intervals |
-| `plugin-vad/config/vad.yaml` | VAD socket, engine, log level, concurrency, Silero model thresholds |
-| `plugin-vad/config/vad-dummy.yaml` | VAD dummy engine config for load testing |
-| `plugin-stt/config/inference-onnx.yaml` | STT socket + sherpa-onnx Zipformer engine config (model paths, EPD, language routing) |
-| `plugin-stt/config/inference-mlx.yaml` | STT socket + mlx-whisper engine config (HuggingFace model, compute type) |
-| `plugin-stt/config/inference-dummy.yaml` | STT dummy engine config for load testing |
+| `core/config/plugins.yaml` | VAD/inference plugin endpoints (`socket` for UDS), routing mode, health check intervals |
+| `core/config/workspace.yaml` | Process list for `speechmux-core ctl` (command, args, working_directory, restart policy) |
+| `plugin-vad/config/vad.yaml` | VAD socket, engine, log level, concurrency, Silero thresholds |
+| `plugin-stt/config/inference-onnx.yaml` | STT socket, sherpa-onnx Zipformer config (model paths, language routing) |
+
+### Docker
+
+| File | Purpose |
+|------|---------|
+| `deploy/docker/core-docker.yaml` | Core config for Docker (same schema as `core.yaml`) |
+| `deploy/docker/plugins-docker.yaml` | Plugin endpoints using TCP `address` (Docker DNS) instead of UDS `socket` |
+| `deploy/docker/vad-docker.yaml` | VAD config for Docker |
+| `deploy/docker/inference-sherpa-docker.yaml` | STT config for Docker with model paths at `/models` |
+| `.env.example` | Template for `.env` — port bindings, `MODELS_DIR`, auth tokens, CORS origins |
+
+### Endpoint config: UDS vs TCP
+
+Plugin endpoints support both Unix domain sockets (local dev) and TCP (Docker). Exactly one must be set:
+
+```yaml
+# Local dev (UDS)
+endpoints:
+  - id: stt-sherpa
+    socket: /tmp/speechmux/stt-sherpa.sock
+
+# Docker (TCP)
+endpoints:
+  - id: stt-sherpa
+    address: stt-plugin:50061
+```
 
 ### Decode Profiles
 
-`core.yaml` includes named decode profiles that clients select via `RecognitionConfig.decode_profile`:
+`core.yaml` includes named decode profiles selected via `RecognitionConfig.decode_profile`:
 
-| Profile | beam_size | best_of | temperature | Use Case |
-|---------|-----------|---------|-------------|----------|
-| `realtime` | 1 | 1 | 0.0 | Live microphone, low latency |
-| `accurate` | 5 | 5 | 0.0 | Batch file transcription, higher accuracy |
+| Profile | beam_size | best_of | Use Case |
+|---------|-----------|---------|----------|
+| `realtime` | 1 | 1 | Live microphone, low latency |
+| `accurate` | 5 | 5 | Batch transcription, higher accuracy |
 
 ### Plugin Routing Modes
 
@@ -278,8 +299,6 @@ Configured in `plugins.yaml` under `inference.routing_mode`:
 
 ### Plugin Circuit Breaker
 
-Configured in `plugins.yaml` under `inference.circuit_breaker`:
-
 ```
 CLOSED ──[failure_threshold consecutive failures]──→ OPEN
 OPEN   ──[half_open_timeout_sec elapsed]──────────→ HALF_OPEN
@@ -287,18 +306,13 @@ HALF_OPEN ──[HealthCheck pass]──→ CLOSED
 HALF_OPEN ──[HealthCheck fail]──→ OPEN
 ```
 
-| Key | Default | Effect |
-|-----|---------|--------|
-| `failure_threshold` | 5 | Consecutive RPC failures to trip the breaker |
-| `half_open_timeout_sec` | 30 | Seconds in OPEN before a probe is attempted |
+### Config Hot-reload
 
-### Config Hot-reload Scope
-
-`core.yaml` is reloaded on SIGHUP (`kill -HUP <pid>`). Not all fields take effect immediately:
+`core.yaml` reloads on SIGHUP (`kill -HUP <pid>`):
 
 | When | Fields |
 |------|--------|
-| **Immediate** (all running sessions) | `vad_silence_sec`, `vad_threshold`, `decode_timeout_sec`, `speech_rms_threshold`, `partial_decode_interval_sec` |
+| **Immediate** | `vad_silence_sec`, `vad_threshold`, `decode_timeout_sec`, `speech_rms_threshold`, `partial_decode_interval_sec` |
 | **New sessions only** | `max_sessions`, `auth_*`, `codec.target_sample_rate`, `rate_limit.*`, `decode_profiles.*` |
 | **Requires restart** | `grpc_port`, `http_port`, `ws_port`, `tls.*` |
 | **Dynamic via Admin API** | `plugins.yaml` endpoints — added/removed at runtime without restart |
@@ -309,12 +323,12 @@ All errors follow the `ERR####` scheme. Codes are permanently assigned and never
 
 | Range | Category | Examples |
 |-------|----------|----------|
-| `ERR1xxx` | Client errors | ERR1001 missing session_id, ERR1004 unauthenticated, ERR1012 rate limited |
+| `ERR1xxx` | Client errors | ERR1001 missing field, ERR1004 unauthenticated, ERR1012 rate limited |
 | `ERR2xxx` | Decode pipeline | ERR2001 decode timeout, ERR2005 all plugins unavailable, ERR2008 queue full |
 | `ERR3xxx` | Internal errors | ERR3003 codec failure, ERR3004 VAD stream failure, ERR3005 buffer overflow |
 | `ERR4xxx` | Admin/HTTP | ERR4001 admin disabled, ERR4004 invalid admin token |
 
-Plugin errors (`PluginErrorCode` enum) are translated to Core `ERR####` codes at the boundary:
+Plugin errors (`PluginErrorCode`) are translated to Core `ERR####` codes at the boundary:
 
 | Plugin Error | Core Code | Meaning |
 |-------------|-----------|---------|
@@ -327,25 +341,21 @@ Plugin errors (`PluginErrorCode` enum) are translated to Core `ERR####` codes at
 ## Testing
 
 ```bash
-# Run every cloned component's tests in one shot
-make test    # Go tests + pytest for each cloned plugin-*/ and client-cli
+make test    # Go tests + pytest for every cloned plugin-* and client-cli
 ```
 
-Or run each suite directly for faster iteration:
+Or run each suite directly:
 
 ```bash
-# Core (Go)
 cd core && go test -race ./...
 
-# Plugins (Python) — run only the ones you have cloned
 cd plugin-vad && uv run pytest tests/ -v && ruff check src/ && mypy src/
 cd plugin-vad-silero && uv run pytest tests/ -v
 cd plugin-stt && uv run pytest tests/ -v && ruff check src/ && mypy src/
+cd plugin-stt-sherpa-onnx && uv run pytest tests/ -v
 
-# CLI client
 cd client-cli && uv run pytest tests/ -v
 
-# Web client
 cd client-web/web && npm run lint
 cd client-web/api && uv run pytest tests/ -v
 ```
