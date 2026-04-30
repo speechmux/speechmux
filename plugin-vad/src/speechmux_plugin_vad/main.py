@@ -128,9 +128,17 @@ def serve(argv: list[str] | None = None) -> None:
     config = _load_yaml_config(args.config)
 
     server_cfg: dict[str, Any] = config.get("server") or {}
-    socket_path = _require_server_field(config, "socket")
     engine_name = _require_server_field(config, "engine")
+    socket_path: str = str(server_cfg.get("socket") or "")
+    tcp_address: str = str(server_cfg.get("address") or "")
     log_level = str(server_cfg.get("log_level") or "INFO").upper()
+
+    if not socket_path and not tcp_address:
+        print("ERROR: server.socket or server.address must be set", file=sys.stderr)
+        sys.exit(1)
+    if socket_path and tcp_address:
+        print("ERROR: server.socket and server.address are mutually exclusive", file=sys.stderr)
+        sys.exit(1)
 
     logging.basicConfig(
         level=getattr(logging, log_level, logging.INFO),
@@ -155,7 +163,10 @@ def serve(argv: list[str] | None = None) -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
     vad_pb2_grpc.add_VADPluginServicer_to_server(servicer, server)
 
-    addr = f"unix://{socket_path}"
+    if tcp_address:
+        addr = tcp_address          # TCP: "0.0.0.0:50060"
+    else:
+        addr = f"unix://{socket_path}"  # UDS: "unix:///tmp/speechmux/vad.sock"
     server.add_insecure_port(addr)
     server.start()
     logger.info("VAD Plugin listening on %s (engine=%s)", addr, engine_name)
