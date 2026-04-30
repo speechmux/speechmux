@@ -38,10 +38,17 @@ def _force_finalize(
     recognizer: sherpa_onnx.OnlineRecognizer,
     stream: sherpa_onnx.OnlineStream,
 ) -> Generator[inference_pb2.StreamResponse, None, None]:
-    """Emit the current partial as is_final and reset the stream.
+    """Emit the current hypothesis as is_final and reset the stream.
 
-    Called when Core sends KIND_FINALIZE_UTTERANCE. Should not occur with
-    endpointing_source=engine, but handled defensively for config mismatches.
+    This is the sole reset point when endpointing_source=core. Core's VAD+EPD
+    logic sends KIND_FINALIZE_UTTERANCE when it detects sufficient trailing
+    silence; the plugin emits is_final and resets the recognizer so the next
+    utterance starts from a clean state.
+
+    input_finished() is called before get_result() to flush the model's
+    attention-sink lookahead buffer — identical to _flush. Without this,
+    tokens still in the unstable region are silently dropped from the final
+    hypothesis (the "unstable tail disappears at finalization" bug).
 
     Args:
         recognizer: Shared OnlineRecognizer for the current session language.
@@ -50,6 +57,9 @@ def _force_finalize(
     Yields:
         One StreamResponse with current text marked is_final=True.
     """
+    stream.input_finished()
+    while recognizer.is_ready(stream):
+        recognizer.decode_stream(stream)
     text: str = recognizer.get_result(stream)
     yield inference_pb2.StreamResponse(
         hypothesis=inference_pb2.StreamHypothesis(text=text, is_final=True)
@@ -171,26 +181,37 @@ class SherpaOnnxEngine(StreamingInferenceEngine):
                     text: str = recognizer.get_result(online_stream)
                     if text and text != last_text:
                         last_text = text
+                        logger.debug(
+                            "raw_engine_partial session_id=%s text=%s",
+                            session_id,
+                            repr(text[:80]),
+                        )
                         yield inference_pb2.StreamResponse(
                             hypothesis=inference_pb2.StreamHypothesis(
                                 text=text, is_final=False
                             )
                         )
 
-                    if recognizer.is_endpoint(online_stream):
-                        if text:
-                            yield inference_pb2.StreamResponse(
-                                hypothesis=inference_pb2.StreamHypothesis(
-                                    text=text, is_final=True
-                                )
-                            )
-                        recognizer.reset(online_stream)
-                        last_text = ""
+                    # is_endpoint() is intentionally NOT checked here.
+                    # endpointing_source=core: Core sends KIND_FINALIZE_UTTERANCE
+                    # to drive utterance boundaries. Checking is_endpoint() here
+                    # would emit spurious is_final=True on every silent frame
+                    # (is_endpoint fires repeatedly without reset), creating
+                    # multiple fake utterances from a single speech segment.
+                    # endpointing_source=engine: would require passing the mode
+                    # in StreamStartConfig; deferred until that proto field exists.
 
                 elif request.HasField("control"):
                     kind = request.control.kind
                     if kind == inference_pb2.StreamControl.KIND_FINALIZE_UTTERANCE:
-                        yield from _force_finalize(recognizer, online_stream)
+                        for resp in _force_finalize(recognizer, online_stream):
+                            if resp.HasField("hypothesis") and resp.hypothesis.is_final:
+                                logger.info(
+                                    "raw_engine_final session_id=%s text=%s",
+                                    session_id,
+                                    repr(resp.hypothesis.text[:120]),
+                                )
+                            yield resp
                         last_text = ""
                     elif kind == inference_pb2.StreamControl.KIND_CANCEL:
                         recognizer.reset(online_stream)

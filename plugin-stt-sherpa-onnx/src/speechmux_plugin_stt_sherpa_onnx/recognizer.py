@@ -70,20 +70,25 @@ class LanguageRecognizers:
             self._default_language = first_language
 
     def get(self, language_code: str) -> sherpa_onnx.OnlineRecognizer:
-        """Return the recognizer for *language_code*, or the default if not found.
+        """Return the recognizer for *language_code*, or the default if empty.
+
+        The servicer validates language_code before calling this method; reaching
+        the fallback branch here indicates a programming error.
 
         Args:
-            language_code: BCP-47 language code (e.g. "ko", "en", "ja").
+            language_code: BCP-47 language code (e.g. "ko"), or empty string for default.
 
         Returns:
             The OnlineRecognizer for the requested language, or the default-language
-            recognizer when *language_code* is absent or unsupported.
+            recognizer when *language_code* is empty.
         """
         recognizer = self._recognizers.get(language_code)
         if recognizer is not None:
             return recognizer
-        logger.debug(
-            "language_code=%r not found; using default %s", language_code, self._default_language
+        logger.warning(
+            "language_code=%r not found; falling back to default %s",
+            language_code,
+            self._default_language,
         )
         return self._recognizers[self._default_language]
 
