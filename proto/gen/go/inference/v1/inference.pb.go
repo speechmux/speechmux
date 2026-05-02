@@ -173,6 +173,58 @@ func (EndpointingCapability) EnumDescriptor() ([]byte, []int) {
 	return file_inference_v1_inference_proto_rawDescGZIP(), []int{2}
 }
 
+// EndpointingSource tells the plugin who drives utterance boundaries.
+// UNSPECIFIED and CORE both mean Core's VAD+EPD sends KIND_FINALIZE_UTTERANCE.
+// ENGINE means the plugin auto-finalizes via its own internal endpointing.
+type EndpointingSource int32
+
+const (
+	EndpointingSource_ENDPOINTING_SOURCE_UNSPECIFIED EndpointingSource = 0 // treated as CORE
+	EndpointingSource_ENDPOINTING_SOURCE_CORE        EndpointingSource = 1 // Core VAD+EPD drives finalization
+	EndpointingSource_ENDPOINTING_SOURCE_ENGINE      EndpointingSource = 2 // Engine auto-finalizes independently
+)
+
+// Enum value maps for EndpointingSource.
+var (
+	EndpointingSource_name = map[int32]string{
+		0: "ENDPOINTING_SOURCE_UNSPECIFIED",
+		1: "ENDPOINTING_SOURCE_CORE",
+		2: "ENDPOINTING_SOURCE_ENGINE",
+	}
+	EndpointingSource_value = map[string]int32{
+		"ENDPOINTING_SOURCE_UNSPECIFIED": 0,
+		"ENDPOINTING_SOURCE_CORE":        1,
+		"ENDPOINTING_SOURCE_ENGINE":      2,
+	}
+)
+
+func (x EndpointingSource) Enum() *EndpointingSource {
+	p := new(EndpointingSource)
+	*p = x
+	return p
+}
+
+func (x EndpointingSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EndpointingSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_inference_v1_inference_proto_enumTypes[3].Descriptor()
+}
+
+func (EndpointingSource) Type() protoreflect.EnumType {
+	return &file_inference_v1_inference_proto_enumTypes[3]
+}
+
+func (x EndpointingSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EndpointingSource.Descriptor instead.
+func (EndpointingSource) EnumDescriptor() ([]byte, []int) {
+	return file_inference_v1_inference_proto_rawDescGZIP(), []int{3}
+}
+
 type StreamControl_Kind int32
 
 const (
@@ -206,11 +258,11 @@ func (x StreamControl_Kind) String() string {
 }
 
 func (StreamControl_Kind) Descriptor() protoreflect.EnumDescriptor {
-	return file_inference_v1_inference_proto_enumTypes[3].Descriptor()
+	return file_inference_v1_inference_proto_enumTypes[4].Descriptor()
 }
 
 func (StreamControl_Kind) Type() protoreflect.EnumType {
-	return &file_inference_v1_inference_proto_enumTypes[3]
+	return &file_inference_v1_inference_proto_enumTypes[4]
 }
 
 func (x StreamControl_Kind) Number() protoreflect.EnumNumber {
@@ -822,14 +874,15 @@ func (*StreamRequest_Audio) isStreamRequest_Payload() {}
 func (*StreamRequest_Control) isStreamRequest_Payload() {}
 
 type StreamStartConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	SampleRate    int32                  `protobuf:"varint,2,opt,name=sample_rate,json=sampleRate,proto3" json:"sample_rate,omitempty"`
-	LanguageCode  string                 `protobuf:"bytes,3,opt,name=language_code,json=languageCode,proto3" json:"language_code,omitempty"`
-	Task          Task                   `protobuf:"varint,4,opt,name=task,proto3,enum=inference.v1.Task" json:"task,omitempty"`
-	DecodeOptions *DecodeOptions         `protobuf:"bytes,5,opt,name=decode_options,json=decodeOptions,proto3" json:"decode_options,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SessionId         string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	SampleRate        int32                  `protobuf:"varint,2,opt,name=sample_rate,json=sampleRate,proto3" json:"sample_rate,omitempty"`
+	LanguageCode      string                 `protobuf:"bytes,3,opt,name=language_code,json=languageCode,proto3" json:"language_code,omitempty"`
+	Task              Task                   `protobuf:"varint,4,opt,name=task,proto3,enum=inference.v1.Task" json:"task,omitempty"`
+	DecodeOptions     *DecodeOptions         `protobuf:"bytes,5,opt,name=decode_options,json=decodeOptions,proto3" json:"decode_options,omitempty"`
+	EndpointingSource EndpointingSource      `protobuf:"varint,6,opt,name=endpointing_source,json=endpointingSource,proto3,enum=inference.v1.EndpointingSource" json:"endpointing_source,omitempty"` // who drives utterance finalization
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *StreamStartConfig) Reset() {
@@ -895,6 +948,13 @@ func (x *StreamStartConfig) GetDecodeOptions() *DecodeOptions {
 		return x.DecodeOptions
 	}
 	return nil
+}
+
+func (x *StreamStartConfig) GetEndpointingSource() EndpointingSource {
+	if x != nil {
+		return x.EndpointingSource
+	}
+	return EndpointingSource_ENDPOINTING_SOURCE_UNSPECIFIED
 }
 
 type AudioChunk struct {
@@ -1293,7 +1353,7 @@ const file_inference_v1_inference_proto_rawDesc = "" +
 	"\x05start\x18\x01 \x01(\v2\x1f.inference.v1.StreamStartConfigH\x00R\x05start\x120\n" +
 	"\x05audio\x18\x02 \x01(\v2\x18.inference.v1.AudioChunkH\x00R\x05audio\x127\n" +
 	"\acontrol\x18\x03 \x01(\v2\x1b.inference.v1.StreamControlH\x00R\acontrolB\t\n" +
-	"\apayload\"\xe4\x01\n" +
+	"\apayload\"\xb4\x02\n" +
 	"\x11StreamStartConfig\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
@@ -1301,7 +1361,8 @@ const file_inference_v1_inference_proto_rawDesc = "" +
 	"sampleRate\x12#\n" +
 	"\rlanguage_code\x18\x03 \x01(\tR\flanguageCode\x12&\n" +
 	"\x04task\x18\x04 \x01(\x0e2\x12.inference.v1.TaskR\x04task\x12B\n" +
-	"\x0edecode_options\x18\x05 \x01(\v2\x1b.inference.v1.DecodeOptionsR\rdecodeOptions\"T\n" +
+	"\x0edecode_options\x18\x05 \x01(\v2\x1b.inference.v1.DecodeOptionsR\rdecodeOptions\x12N\n" +
+	"\x12endpointing_source\x18\x06 \x01(\x0e2\x1f.inference.v1.EndpointingSourceR\x11endpointingSource\"T\n" +
 	"\n" +
 	"AudioChunk\x12'\n" +
 	"\x0fsequence_number\x18\x01 \x01(\x04R\x0esequenceNumber\x12\x1d\n" +
@@ -1344,7 +1405,11 @@ const file_inference_v1_inference_proto_rawDesc = "" +
 	"\"ENDPOINTING_CAPABILITY_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bENDPOINTING_CAPABILITY_NONE\x10\x01\x12$\n" +
 	" ENDPOINTING_CAPABILITY_DETECTION\x10\x02\x12(\n" +
-	"$ENDPOINTING_CAPABILITY_AUTO_FINALIZE\x10\x032\xcb\x02\n" +
+	"$ENDPOINTING_CAPABILITY_AUTO_FINALIZE\x10\x03*s\n" +
+	"\x11EndpointingSource\x12\"\n" +
+	"\x1eENDPOINTING_SOURCE_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17ENDPOINTING_SOURCE_CORE\x10\x01\x12\x1d\n" +
+	"\x19ENDPOINTING_SOURCE_ENGINE\x10\x022\xcb\x02\n" +
 	"\x0fInferencePlugin\x12O\n" +
 	"\n" +
 	"Transcribe\x12\x1f.inference.v1.TranscribeRequest\x1a .inference.v1.TranscribeResponse\x12Q\n" +
@@ -1364,58 +1429,60 @@ func file_inference_v1_inference_proto_rawDescGZIP() []byte {
 	return file_inference_v1_inference_proto_rawDescData
 }
 
-var file_inference_v1_inference_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_inference_v1_inference_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_inference_v1_inference_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_inference_v1_inference_proto_goTypes = []any{
 	(Task)(0),                     // 0: inference.v1.Task
 	(StreamingMode)(0),            // 1: inference.v1.StreamingMode
 	(EndpointingCapability)(0),    // 2: inference.v1.EndpointingCapability
-	(StreamControl_Kind)(0),       // 3: inference.v1.StreamControl.Kind
-	(*TranscribeRequest)(nil),     // 4: inference.v1.TranscribeRequest
-	(*TranscribeResponse)(nil),    // 5: inference.v1.TranscribeResponse
-	(*DecodeOptions)(nil),         // 6: inference.v1.DecodeOptions
-	(*Segment)(nil),               // 7: inference.v1.Segment
-	(*InferenceCapabilities)(nil), // 8: inference.v1.InferenceCapabilities
-	(*StreamRequest)(nil),         // 9: inference.v1.StreamRequest
-	(*StreamStartConfig)(nil),     // 10: inference.v1.StreamStartConfig
-	(*AudioChunk)(nil),            // 11: inference.v1.AudioChunk
-	(*StreamControl)(nil),         // 12: inference.v1.StreamControl
-	(*StreamResponse)(nil),        // 13: inference.v1.StreamResponse
-	(*StreamHypothesis)(nil),      // 14: inference.v1.StreamHypothesis
-	(*StreamError)(nil),           // 15: inference.v1.StreamError
-	(v1.PluginErrorCode)(0),       // 16: common.v1.PluginErrorCode
-	(*emptypb.Empty)(nil),         // 17: google.protobuf.Empty
-	(*v1.PluginHealthStatus)(nil), // 18: common.v1.PluginHealthStatus
+	(EndpointingSource)(0),        // 3: inference.v1.EndpointingSource
+	(StreamControl_Kind)(0),       // 4: inference.v1.StreamControl.Kind
+	(*TranscribeRequest)(nil),     // 5: inference.v1.TranscribeRequest
+	(*TranscribeResponse)(nil),    // 6: inference.v1.TranscribeResponse
+	(*DecodeOptions)(nil),         // 7: inference.v1.DecodeOptions
+	(*Segment)(nil),               // 8: inference.v1.Segment
+	(*InferenceCapabilities)(nil), // 9: inference.v1.InferenceCapabilities
+	(*StreamRequest)(nil),         // 10: inference.v1.StreamRequest
+	(*StreamStartConfig)(nil),     // 11: inference.v1.StreamStartConfig
+	(*AudioChunk)(nil),            // 12: inference.v1.AudioChunk
+	(*StreamControl)(nil),         // 13: inference.v1.StreamControl
+	(*StreamResponse)(nil),        // 14: inference.v1.StreamResponse
+	(*StreamHypothesis)(nil),      // 15: inference.v1.StreamHypothesis
+	(*StreamError)(nil),           // 16: inference.v1.StreamError
+	(v1.PluginErrorCode)(0),       // 17: common.v1.PluginErrorCode
+	(*emptypb.Empty)(nil),         // 18: google.protobuf.Empty
+	(*v1.PluginHealthStatus)(nil), // 19: common.v1.PluginHealthStatus
 }
 var file_inference_v1_inference_proto_depIdxs = []int32{
 	0,  // 0: inference.v1.TranscribeRequest.task:type_name -> inference.v1.Task
-	6,  // 1: inference.v1.TranscribeRequest.decode_options:type_name -> inference.v1.DecodeOptions
-	7,  // 2: inference.v1.TranscribeResponse.segments:type_name -> inference.v1.Segment
-	16, // 3: inference.v1.TranscribeResponse.error_code:type_name -> common.v1.PluginErrorCode
+	7,  // 1: inference.v1.TranscribeRequest.decode_options:type_name -> inference.v1.DecodeOptions
+	8,  // 2: inference.v1.TranscribeResponse.segments:type_name -> inference.v1.Segment
+	17, // 3: inference.v1.TranscribeResponse.error_code:type_name -> common.v1.PluginErrorCode
 	1,  // 4: inference.v1.InferenceCapabilities.streaming_mode:type_name -> inference.v1.StreamingMode
 	2,  // 5: inference.v1.InferenceCapabilities.endpointing_capability:type_name -> inference.v1.EndpointingCapability
-	10, // 6: inference.v1.StreamRequest.start:type_name -> inference.v1.StreamStartConfig
-	11, // 7: inference.v1.StreamRequest.audio:type_name -> inference.v1.AudioChunk
-	12, // 8: inference.v1.StreamRequest.control:type_name -> inference.v1.StreamControl
+	11, // 6: inference.v1.StreamRequest.start:type_name -> inference.v1.StreamStartConfig
+	12, // 7: inference.v1.StreamRequest.audio:type_name -> inference.v1.AudioChunk
+	13, // 8: inference.v1.StreamRequest.control:type_name -> inference.v1.StreamControl
 	0,  // 9: inference.v1.StreamStartConfig.task:type_name -> inference.v1.Task
-	6,  // 10: inference.v1.StreamStartConfig.decode_options:type_name -> inference.v1.DecodeOptions
-	3,  // 11: inference.v1.StreamControl.kind:type_name -> inference.v1.StreamControl.Kind
-	14, // 12: inference.v1.StreamResponse.hypothesis:type_name -> inference.v1.StreamHypothesis
-	15, // 13: inference.v1.StreamResponse.error:type_name -> inference.v1.StreamError
-	16, // 14: inference.v1.StreamError.code:type_name -> common.v1.PluginErrorCode
-	4,  // 15: inference.v1.InferencePlugin.Transcribe:input_type -> inference.v1.TranscribeRequest
-	9,  // 16: inference.v1.InferencePlugin.TranscribeStream:input_type -> inference.v1.StreamRequest
-	17, // 17: inference.v1.InferencePlugin.GetCapabilities:input_type -> google.protobuf.Empty
-	17, // 18: inference.v1.InferencePlugin.HealthCheck:input_type -> google.protobuf.Empty
-	5,  // 19: inference.v1.InferencePlugin.Transcribe:output_type -> inference.v1.TranscribeResponse
-	13, // 20: inference.v1.InferencePlugin.TranscribeStream:output_type -> inference.v1.StreamResponse
-	8,  // 21: inference.v1.InferencePlugin.GetCapabilities:output_type -> inference.v1.InferenceCapabilities
-	18, // 22: inference.v1.InferencePlugin.HealthCheck:output_type -> common.v1.PluginHealthStatus
-	19, // [19:23] is the sub-list for method output_type
-	15, // [15:19] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	7,  // 10: inference.v1.StreamStartConfig.decode_options:type_name -> inference.v1.DecodeOptions
+	3,  // 11: inference.v1.StreamStartConfig.endpointing_source:type_name -> inference.v1.EndpointingSource
+	4,  // 12: inference.v1.StreamControl.kind:type_name -> inference.v1.StreamControl.Kind
+	15, // 13: inference.v1.StreamResponse.hypothesis:type_name -> inference.v1.StreamHypothesis
+	16, // 14: inference.v1.StreamResponse.error:type_name -> inference.v1.StreamError
+	17, // 15: inference.v1.StreamError.code:type_name -> common.v1.PluginErrorCode
+	5,  // 16: inference.v1.InferencePlugin.Transcribe:input_type -> inference.v1.TranscribeRequest
+	10, // 17: inference.v1.InferencePlugin.TranscribeStream:input_type -> inference.v1.StreamRequest
+	18, // 18: inference.v1.InferencePlugin.GetCapabilities:input_type -> google.protobuf.Empty
+	18, // 19: inference.v1.InferencePlugin.HealthCheck:input_type -> google.protobuf.Empty
+	6,  // 20: inference.v1.InferencePlugin.Transcribe:output_type -> inference.v1.TranscribeResponse
+	14, // 21: inference.v1.InferencePlugin.TranscribeStream:output_type -> inference.v1.StreamResponse
+	9,  // 22: inference.v1.InferencePlugin.GetCapabilities:output_type -> inference.v1.InferenceCapabilities
+	19, // 23: inference.v1.InferencePlugin.HealthCheck:output_type -> common.v1.PluginHealthStatus
+	20, // [20:24] is the sub-list for method output_type
+	16, // [16:20] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_inference_v1_inference_proto_init() }
@@ -1437,7 +1504,7 @@ func file_inference_v1_inference_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inference_v1_inference_proto_rawDesc), len(file_inference_v1_inference_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      5,
 			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,

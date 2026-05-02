@@ -27,6 +27,12 @@ class EndpointingCapability(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ENDPOINTING_CAPABILITY_NONE: _ClassVar[EndpointingCapability]
     ENDPOINTING_CAPABILITY_DETECTION: _ClassVar[EndpointingCapability]
     ENDPOINTING_CAPABILITY_AUTO_FINALIZE: _ClassVar[EndpointingCapability]
+
+class EndpointingSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ENDPOINTING_SOURCE_UNSPECIFIED: _ClassVar[EndpointingSource]
+    ENDPOINTING_SOURCE_CORE: _ClassVar[EndpointingSource]
+    ENDPOINTING_SOURCE_ENGINE: _ClassVar[EndpointingSource]
 TASK_UNSPECIFIED: Task
 TASK_TRANSCRIBE: Task
 TASK_TRANSLATE: Task
@@ -37,6 +43,9 @@ ENDPOINTING_CAPABILITY_UNSPECIFIED: EndpointingCapability
 ENDPOINTING_CAPABILITY_NONE: EndpointingCapability
 ENDPOINTING_CAPABILITY_DETECTION: EndpointingCapability
 ENDPOINTING_CAPABILITY_AUTO_FINALIZE: EndpointingCapability
+ENDPOINTING_SOURCE_UNSPECIFIED: EndpointingSource
+ENDPOINTING_SOURCE_CORE: EndpointingSource
+ENDPOINTING_SOURCE_ENGINE: EndpointingSource
 
 class TranscribeRequest(_message.Message):
     __slots__ = ("request_id", "session_id", "audio_data", "sample_rate", "language_code", "task", "decode_options", "is_final", "is_partial")
@@ -149,18 +158,20 @@ class StreamRequest(_message.Message):
     def __init__(self, start: _Optional[_Union[StreamStartConfig, _Mapping]] = ..., audio: _Optional[_Union[AudioChunk, _Mapping]] = ..., control: _Optional[_Union[StreamControl, _Mapping]] = ...) -> None: ...
 
 class StreamStartConfig(_message.Message):
-    __slots__ = ("session_id", "sample_rate", "language_code", "task", "decode_options")
+    __slots__ = ("session_id", "sample_rate", "language_code", "task", "decode_options", "endpointing_source")
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     SAMPLE_RATE_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_CODE_FIELD_NUMBER: _ClassVar[int]
     TASK_FIELD_NUMBER: _ClassVar[int]
     DECODE_OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    ENDPOINTING_SOURCE_FIELD_NUMBER: _ClassVar[int]
     session_id: str
     sample_rate: int
     language_code: str
     task: Task
     decode_options: DecodeOptions
-    def __init__(self, session_id: _Optional[str] = ..., sample_rate: _Optional[int] = ..., language_code: _Optional[str] = ..., task: _Optional[_Union[Task, str]] = ..., decode_options: _Optional[_Union[DecodeOptions, _Mapping]] = ...) -> None: ...
+    endpointing_source: EndpointingSource
+    def __init__(self, session_id: _Optional[str] = ..., sample_rate: _Optional[int] = ..., language_code: _Optional[str] = ..., task: _Optional[_Union[Task, str]] = ..., decode_options: _Optional[_Union[DecodeOptions, _Mapping]] = ..., endpointing_source: _Optional[_Union[EndpointingSource, str]] = ...) -> None: ...
 
 class AudioChunk(_message.Message):
     __slots__ = ("sequence_number", "audio_data")

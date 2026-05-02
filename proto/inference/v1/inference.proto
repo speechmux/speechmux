@@ -118,6 +118,15 @@ enum EndpointingCapability {
   ENDPOINTING_CAPABILITY_AUTO_FINALIZE = 3;
 }
 
+// EndpointingSource tells the plugin who drives utterance boundaries.
+// UNSPECIFIED and CORE both mean Core's VAD+EPD sends KIND_FINALIZE_UTTERANCE.
+// ENGINE means the plugin auto-finalizes via its own internal endpointing.
+enum EndpointingSource {
+  ENDPOINTING_SOURCE_UNSPECIFIED = 0; // treated as CORE
+  ENDPOINTING_SOURCE_CORE        = 1; // Core VAD+EPD drives finalization
+  ENDPOINTING_SOURCE_ENGINE      = 2; // Engine auto-finalizes independently
+}
+
 // ─── Streaming RPC messages ────────────────────────────────────────────────
 
 message StreamRequest {
@@ -129,11 +138,12 @@ message StreamRequest {
 }
 
 message StreamStartConfig {
-  string        session_id     = 1;
-  int32         sample_rate    = 2;
-  string        language_code  = 3;
-  Task          task           = 4;
-  DecodeOptions decode_options = 5;
+  string            session_id          = 1;
+  int32             sample_rate         = 2;
+  string            language_code       = 3;
+  Task              task                = 4;
+  DecodeOptions     decode_options      = 5;
+  EndpointingSource endpointing_source  = 6; // who drives utterance finalization
 }
 
 message AudioChunk {
