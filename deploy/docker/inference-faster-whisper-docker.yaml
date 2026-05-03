@@ -1,0 +1,17 @@
+# STT Inference Plugin configuration — faster-whisper engine (Docker / CPU)
+# Used by: docker compose --profile faster-whisper up
+
+server:
+  address: "0.0.0.0:50062"               # TCP bind address for Docker. Replaces socket used in local/Nomad mode.
+  engine: faster_whisper                 # Engine to load. Must match a key under engine: below.
+  log_level: INFO                        # Logging verbosity: DEBUG | INFO | WARNING | ERROR.
+  max_concurrent_sessions: 1             # Max concurrent Transcribe requests. Tune to GPU concurrency.
+  log_transcription_text: true           # If true, recognized text is included in INFO-level logs.
+
+engine:
+  faster_whisper:
+    model: small                         # Model size or HuggingFace ID. Model files are mounted at /models at runtime.
+    device: cpu                          # Compute device: cuda (GPU container) | cpu (fallback, slow).
+    compute_type: int8                   # float16 = 8+ GB VRAM; int8_float16 = 4 GB VRAM; int8 = CPU fallback.
+    language: null                       # BCP-47 language code (e.g. "ko"). null = auto-detect per request.
+    beam_size: 1                         # Beam search width. Higher = more accurate but slower.

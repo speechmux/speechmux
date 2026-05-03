@@ -5,8 +5,12 @@ GO        ?= go
 CORE_BIN  := core/bin/speechmux-core
 WORKSPACE ?= core/config/workspace.yaml
 MODELS_DIR ?= ./models
-# Docker Compose profile to use for docker-* targets (override with DOCKER_PROFILE=<name>).
-DOCKER_PROFILE ?= sherpa
+# Space-separated list of Docker Compose profiles to activate for docker-* targets.
+# Override: make docker-up DOCKER_PROFILE=sherpa  (sherpa only)
+#           make docker-up DOCKER_PROFILE="sherpa faster-whisper"  (both; default)
+DOCKER_PROFILE ?= sherpa faster-whisper
+# Expands to: --profile sherpa --profile faster-whisper (evaluated lazily so overrides work).
+_DOCKER_PROFILE_FLAGS = $(foreach p,$(DOCKER_PROFILE),--profile $(p))
 
 .PHONY: clone-base clone-stt clone-vad clone-web clone-cli \
         setup proto build \
@@ -57,7 +61,7 @@ setup:
 	@if [ ! -d $(VENV) ]; then $(UV) venv --python 3.13 $(VENV); fi
 	cd core && $(GO) mod download
 	@if [ ! -f proto/gen/python/pyproject.toml ]; then \
-		printf '[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n\n[project]\nname = "speechmux-proto"\nversion = "0.1.0"\nrequires-python = ">=3.13"\ndependencies = ["grpcio>=1.60.0", "protobuf>=4.25.0"]\n\n[tool.hatch.build.targets.wheel]\npackages = ["stt_proto"]\n' \
+		printf '[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n\n[project]\nname = "speechmux-proto"\nversion = "0.1.0"\nrequires-python = ">=3.10"\ndependencies = ["grpcio>=1.60.0", "protobuf>=4.25.0"]\n\n[tool.hatch.build.targets.wheel]\npackages = ["stt_proto"]\n' \
 		> proto/gen/python/pyproject.toml; \
 	fi
 	$(UV) pip install --python $(PYTHON) -e "proto/gen/python"
@@ -115,25 +119,25 @@ test:
 # ── Docker ────────────────────────────────────────────────────────────────────
 
 docker-build:
-	docker compose --profile $(DOCKER_PROFILE) build
+	docker compose $(_DOCKER_PROFILE_FLAGS) build
 
 docker-up:
-	docker compose --profile $(DOCKER_PROFILE) up -d
+	docker compose $(_DOCKER_PROFILE_FLAGS) up -d
 
 docker-down:
-	docker compose --profile $(DOCKER_PROFILE) down
+	docker compose $(_DOCKER_PROFILE_FLAGS) down
 
-# Tail the three most useful services together; use --tail to avoid a wall of history.
+# Tail core + all STT/VAD services; use --tail to avoid a wall of history.
 docker-logs:
-	docker compose --profile $(DOCKER_PROFILE) logs -f --tail=200 core vad-silero stt-sherpa
+	docker compose $(_DOCKER_PROFILE_FLAGS) logs -f --tail=200 core vad-silero stt-sherpa stt-faster-whisper
 
-# STT plugin logs only (raw_engine_partial/final, raw_engine_final from sherpa).
+# STT plugin logs only.
 docker-logs-stt:
-	docker compose --profile $(DOCKER_PROFILE) logs -f --tail=200 stt-sherpa
+	docker compose $(_DOCKER_PROFILE_FLAGS) logs -f --tail=200 stt-sherpa stt-faster-whisper
 
 # VAD plugin logs only.
 docker-logs-vad:
-	docker compose --profile $(DOCKER_PROFILE) logs -f --tail=200 vad-silero
+	docker compose $(_DOCKER_PROFILE_FLAGS) logs -f --tail=200 vad-silero
 
 download-models:
 	@mkdir -p $(MODELS_DIR)/ko $(MODELS_DIR)/en

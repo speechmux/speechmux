@@ -11,9 +11,11 @@ inference:
   routing_mode: "least_connections"  # Routing strategy: round_robin | least_connections | active_standby.
   endpoints:
     - id: "sherpa-onnx"              # Unique ID; used in health reports and engine_hint routing.
-      address: "stt-plugin:50061"    # TCP host:port — resolves to whichever STT profile is active via
-                                     # Docker network alias "stt-plugin".
+      address: "stt-sherpa:50061"    # TCP host:port — Docker service name resolves via internal DNS.
       priority: 1                    # Priority for active_standby routing. Higher = preferred.
+    - id: "faster-whisper"           # faster-whisper CPU engine (profiles: faster-whisper).
+      address: "stt-faster-whisper:50062"  # TCP host:port. Circuit breaker opens if service is not active.
+      priority: 1                    # Same priority as sherpa-onnx; least_connections balances between both.
   health_check_interval_sec: 10      # Interval (seconds) between health probes to STT endpoints.
   health_probe_timeout_sec: 5        # Per-probe timeout (seconds). Probes exceeding this count as failures.
   circuit_breaker:

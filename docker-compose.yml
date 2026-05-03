@@ -40,8 +40,7 @@ services:
 
   # ── STT: sherpa-onnx (CPU, default) ─────────────────────────────────────────
   # Start with: docker compose --profile sherpa up
-  # Network alias "stt-plugin" allows plugins-docker.yaml to remain unchanged
-  # regardless of which STT engine profile is active.
+  # Referenced directly by service name in plugins-docker.yaml (stt-sherpa:50061).
   stt-sherpa:
     profiles: ["sherpa"]
     build:
@@ -52,10 +51,6 @@ services:
       - ${MODELS_DIR:-./plugin-stt-sherpa-onnx/models}:/models:ro
     expose:
       - "50061"
-    networks:
-      default:
-        aliases:
-          - stt-plugin
     healthcheck:
       test: ["CMD", "python", "-c",
              "import socket; s=socket.create_connection(('localhost',50061),2); s.close()"]
@@ -65,30 +60,27 @@ services:
       start_period: 60s    # sherpa-onnx model load takes ~30s on first start
     restart: unless-stopped
 
-  # ── STT: faster-whisper (NVIDIA GPU, Linux only) ─────────────────────────────
+  # ── STT: faster-whisper (CPU; swap device/compute_type in config for GPU) ────
   # Start with: docker compose --profile faster-whisper up
-  # Requires: nvidia-container-toolkit on host; CUDA 12+ driver.
-  # stt-faster-whisper:
-  #   profiles: ["faster-whisper"]
-  #   build:
-  #     context: ./plugin-stt-faster-whisper
-  #     dockerfile: Dockerfile
-  #   volumes:
-  #     - ./deploy/docker/inference-faster-whisper-docker.yaml:/etc/speechmux/inference.yaml:ro
-  #   expose:
-  #     - "50061"
-  #   networks:
-  #     default:
-  #       aliases:
-  #         - stt-plugin
-  #   deploy:
-  #     resources:
-  #       reservations:
-  #         devices:
-  #           - driver: nvidia
-  #             count: 1
-  #             capabilities: [gpu]
-  #   restart: unless-stopped
+  # Build context is workspace root (Dockerfile needs proto/ and plugin-stt/).
+  # Model is auto-downloaded from HuggingFace on first start; no /models mount needed.
+  stt-faster-whisper:
+    profiles: ["faster-whisper"]
+    build:
+      context: .
+      dockerfile: plugin-stt-faster-whisper/Dockerfile
+    volumes:
+      - ./deploy/docker/inference-faster-whisper-docker.yaml:/etc/speechmux/inference.yaml:ro
+    expose:
+      - "50062"
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import socket; s=socket.create_connection(('localhost',50062),2); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 90s    # faster-whisper small/cpu model download + load takes ~30-90s on first start
+    restart: unless-stopped
 
   # ── Web Client (always active) ───────────────────────────────────────────────
   client-web-api:
@@ -118,6 +110,9 @@ services:
       - "${WEB_PORT:-3020}:3020"
     environment:
       - PORT=3020
+      # Server-side only: Next.js API route fetches live engine list from Core admin.
+      # Must point to Core's http_port (default 8090). Not exposed to the browser.
+      - CORE_ADMIN_URL=http://core:8090
     depends_on:
       - client-web-api
     restart: unless-stopped
