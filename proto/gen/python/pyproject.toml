@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "speechmux-proto"
 version = "0.1.0"
 description = "Generated gRPC/protobuf stubs for SpeechMux"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "grpcio>=1.60.0",
     "protobuf>=4.25.0",
