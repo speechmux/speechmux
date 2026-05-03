@@ -4,7 +4,7 @@ A Go-based streaming speech-to-text gateway that orchestrates multiple STT engin
 
 ## Architecture
 
-**Batch engine** (e.g. mlx-whisper) — VAD drives utterance boundaries; Core extracts segments and sends each as a single Transcribe RPC:
+**Batch engine** (e.g. whisper) — VAD drives utterance boundaries; Core extracts the speech segment from the ring buffer and dispatches it as a single Transcribe RPC:
 
 ```mermaid
 flowchart TD
@@ -18,7 +18,7 @@ flowchart TD
         pcmCh --> frameAggregator["frameAggregator"]
         pcmCh --> ARB["AudioRingBuffer"]
         EPDC["EPD Controller"] -->|"ExtractRange"| ARB
-        ARB -->|"speech segment"| DS["DecodeScheduler"]
+        ARB -->|"speech segment"| FDD["FairDecodeDispatcher"]
         RA["ResultAssembler"]
     end
 
@@ -27,18 +27,19 @@ flowchart TD
     end
 
     subgraph STTPlugin ["STT Plugin (Python)"]
-        STTServicer["Transcribe servicer"] <--> InferenceEngine["InferenceEngine</br>(e.g. mlx-whisper)"]
+        STTServicer["Transcribe servicer"] <--> InferenceEngine["InferenceEngine</br>(e.g. faster-whisper)"]
     end
 
     transport -->|"audio"| codecConvert
     frameAggregator -->|"UDS / TCP</br>(StreamVAD)"| VADServicer
-    VADServicer -->|"VADResult + AdvanceWatermark"| EPDC
-    DS -->|"UDS / TCP</br>(Transcribe)"| STTServicer
+    VADServicer -->|"VADResult"| EPDC
+    VADServicer -->|"AdvanceWatermark"| ARB
+    FDD -->|"UDS / TCP</br>(Transcribe)"| STTServicer
     STTServicer -->|"TranscribeResponse"| RA
     RA -->|"committed / unstable text"| transport
 ```
 
-**Streaming engine** (e.g. sherpa-onnx) — audio flows continuously to the STT plugin; the ring buffer and batch decode scheduler are bypassed. VAD still runs in parallel: Core's EPD Controller sends `KIND_FINALIZE_UTTERANCE` when silence is detected (`endpointing_source: core`):
+**Streaming engine** (e.g. sherpa-onnx) — audio flows continuously to the STT plugin; the batch decode dispatcher is not used. VAD still runs in parallel to drive EPD: Core sends `KIND_FINALIZE_UTTERANCE` when silence is detected (`endpointing_source: core`):
 
 ```mermaid
 flowchart TD
@@ -49,7 +50,6 @@ flowchart TD
     subgraph Core ["Core (Go)"]
         codecConvert["codecConvert"] --> pcmCh(["<i>ch: pcm</i>"])
         pcmCh --> frameAggregator["frameAggregator"]
-        pcmCh --> ARB["AudioRingBuffer"]
         EPDC["EPD Controller"] -->|"KIND_FINALIZE_UTTERANCE"| STTServicer
         RA["ResultAssembler"]
     end
@@ -65,7 +65,7 @@ flowchart TD
     transport -->|"audio"| codecConvert
     frameAggregator -->|"UDS / TCP</br>(TranscribeStream)"| STTServicer
     frameAggregator -->|"UDS / TCP</br>(StreamVAD)"| VADServicer
-    VADServicer -->|"VADResult + AdvanceWatermark"| EPDC
+    VADServicer -->|"VADResult"| EPDC
     STTServicer -->|"StreamResponse</br>(partial / final)"| RA
     RA -->|"committed / unstable text"| transport
 ```
