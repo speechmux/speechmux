@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "speechmux-plugin-stt-faster-whisper"
+version = "0.0.0"
+description = "SpeechMux STT Plugin — faster-whisper engine (CTranslate2, CPU/CUDA)"
+requires-python = ">=3.10"
+dependencies = [
+    "speechmux-plugin-stt>=0.0.0",
+    "faster-whisper>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.entry-points."speechmux.stt_engine"]
+faster_whisper = "speechmux_plugin_stt_faster_whisper.engine:FasterWhisperEngine"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/speechmux_plugin_stt_faster_whisper"]
+
+[tool.uv.sources]
+# Local path reference so `uv lock` resolves speechmux-plugin-stt without PyPI.
+speechmux-plugin-stt = { path = "../plugin-stt", editable = true }
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["faster_whisper.*", "speechmux_plugin_stt.*", "scipy.*"]
+ignore_missing_imports = true
