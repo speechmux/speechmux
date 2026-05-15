@@ -1,0 +1,61 @@
+state_dir: /tmp/speechmux  # Directory where PID files and the manager PID are written at runtime.
+
+# Plugin profile definitions, grouped by category.
+# Each category key must match the name: of the corresponding slot entry in processes:.
+# Add new engines by adding a key under the appropriate category.
+profiles:
+  vad-plugins:
+    silero:
+      command: .venv/bin/python3             # Interpreter relative to working_directory.
+      args:
+        - "-m"
+        - "speechmux_plugin_vad.main"
+        - "--config"
+        - "plugin-vad/config/vad.yaml"       # Socket path and engine configured inside this file.
+      working_directory: "."                 # Workspace root — where .venv lives.
+      restart: on-failure                    # Restart policy: always | on-failure | never.
+      startup_delay_ms: 500                  # Wait (ms) before launching the next process.
+
+  stt-plugins:
+    sherpa-onnx:
+      command: .venv/bin/python3
+      args:
+        - "-m"
+        - "speechmux_plugin_stt.main"
+        - "--config"
+        - "plugin-stt/config/inference-onnx.yaml"  # Socket path and engine configured inside this file.
+      working_directory: "."
+      restart: on-failure
+      startup_delay_ms: 0                    # Starts after VAD delay above has elapsed.
+
+    mlx-whisper:
+      command: .venv/bin/python3
+      args:
+        - "-m"
+        - "speechmux_plugin_stt.main"
+        - "--config"
+        - "plugin-stt/config/inference-mlx.yaml"   # Socket path and engine configured inside this file.
+      working_directory: "."
+      restart: on-failure
+      startup_delay_ms: 0
+
+# Process groups and always-on entries, started in declaration order.
+# Slot entries (profiles: non-empty): name must match a category key in profiles: above.
+# Direct entries (no profiles:):       always started regardless of active profiles.
+processes:
+  - name: vad-plugins                        # VAD slot — activate with: --profile silero
+    profiles: [silero]                        # All available VAD engines; only active ones start.
+
+  - name: stt-plugins                        # STT slot — activate with: --profile sherpa-onnx or --profile mlx-whisper
+    profiles: [sherpa-onnx, mlx-whisper]     # All available STT engines; only active ones start.
+
+  - name: core                               # Always-on: SpeechMux Core starts after all plugins.
+    command: ./core/bin/speechmux-core       # Must be pre-built with 'make build'.
+    args:
+      - "--config"
+      - "core/config/core.yaml"
+      - "--plugins"
+      - "core/config/plugins.yaml"
+    working_directory: "."
+    restart: on-failure
+    startup_delay_ms: 1000                   # Wait (ms) for plugins to bind their sockets before core starts.

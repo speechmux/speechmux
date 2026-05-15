@@ -3,8 +3,16 @@ PYTHON    ?= $(abspath $(VENV)/bin/python3)
 UV        ?= uv
 GO        ?= go
 CORE_BIN  := core/bin/speechmux-core
-WORKSPACE ?= core/config/workspace.yaml
+WORKSPACE ?= workspace.yaml
 MODELS_DIR ?= ./models
+# Space-separated list of engine profile names to activate (must match keys under
+# a category in workspace.yaml profiles: section, e.g. silero, sherpa-onnx, mlx-whisper).
+# Both STT engines are registered in plugins.yaml, so running them together is intentional.
+# Override: make up PROFILES="silero sherpa-onnx"   (sherpa-onnx only, no mlx-whisper)
+#           make up PROFILES="silero mlx-whisper"   (mlx-whisper only, no sherpa-onnx)
+PROFILES ?= silero sherpa-onnx mlx-whisper
+# Expands to: --profile silero --profile sherpa-onnx --profile mlx-whisper (evaluated lazily so overrides work).
+_PROFILE_FLAGS = $(foreach p,$(PROFILES),--profile $(p))
 # Space-separated list of Docker Compose profiles to activate for docker-* targets.
 # Override: make docker-up DOCKER_PROFILE=sherpa  (sherpa only)
 #           make docker-up DOCKER_PROFILE="sherpa faster-whisper"  (both; default)
@@ -90,7 +98,7 @@ up: build
 	@if lsof -ti :50051 >/dev/null 2>&1 || lsof -ti :8090 >/dev/null 2>&1 || lsof -ti :8091 >/dev/null 2>&1; then \
 		echo "ERROR: core ports already in use. Run 'make down' first."; exit 1; \
 	fi
-	$(CORE_BIN) ctl start --workspace $(WORKSPACE) &
+	$(CORE_BIN) ctl start --workspace $(WORKSPACE) $(_PROFILE_FLAGS) &
 
 down:
 	$(CORE_BIN) ctl stop --workspace $(WORKSPACE) || true
