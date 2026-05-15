@@ -34,6 +34,43 @@ def _int16_to_float32(pcm_bytes: bytes) -> np.ndarray[Any, np.dtype[np.float32]]
     return samples.astype(np.float32) / 32768.0
 
 
+def _warn_if_empty(
+    session_id: str,
+    text: str,
+    audio_samples: int,
+    sample_rate: int,
+) -> None:
+    """Log a warning when the model returns empty text after significant audio.
+
+    Empty output despite audible speech usually means the input audio bandwidth
+    does not match the model's training distribution. The most common cause is
+    narrowband (telephone-quality) audio with energy only below ~4 kHz being
+    fed to a wideband model trained on 16 kHz broadband speech.
+
+    Args:
+        session_id: Session identifier for log correlation.
+        text: Final hypothesis text returned by the recognizer.
+        audio_samples: Total float32 samples received this utterance.
+        sample_rate: Input sample rate (Hz) used for duration estimation.
+    """
+    if text:
+        return
+    if sample_rate <= 0:
+        return
+    audio_duration_sec = audio_samples / sample_rate
+    if audio_duration_sec < 0.5:
+        return
+    logger.warning(
+        "empty transcript after %.1f s of audio session_id=%s — "
+        "the model may not support this audio's frequency range. "
+        "This model is trained on wideband speech (0–8 kHz). "
+        "Narrowband/telephone audio (energy only below ~4 kHz) will not be "
+        "recognised. Use a wideband recording or switch to a Whisper-based engine.",
+        audio_duration_sec,
+        session_id,
+    )
+
+
 def _force_finalize(
     recognizer: sherpa_onnx.OnlineRecognizer,
     stream: sherpa_onnx.OnlineStream,
@@ -177,11 +214,14 @@ class SherpaOnnxEngine(StreamingInferenceEngine):
         recognizer = self._recognizers.get(language_code)
         online_stream = recognizer.create_stream()
         last_text = ""
+        audio_samples_received: int = 0  # total float32 samples fed this session
+        ever_got_partial = False  # True if any non-empty partial was emitted
 
         try:
             for request in request_iterator:
                 if request.HasField("audio"):
                     pcm_float32 = _int16_to_float32(request.audio.audio_data)
+                    audio_samples_received += len(pcm_float32)
                     online_stream.accept_waveform(sample_rate, pcm_float32)
 
                     while recognizer.is_ready(online_stream):
@@ -190,6 +230,7 @@ class SherpaOnnxEngine(StreamingInferenceEngine):
                     text: str = recognizer.get_result(online_stream)
                     if text and text != last_text:
                         last_text = text
+                        ever_got_partial = True
                         logger.debug(
                             "raw_engine_partial session_id=%s text=%s",
                             session_id,
@@ -218,26 +259,40 @@ class SherpaOnnxEngine(StreamingInferenceEngine):
                             )
                         recognizer.reset(online_stream)
                         last_text = ""
+                        ever_got_partial = False
 
                 elif request.HasField("control"):
                     kind = request.control.kind
                     if kind == inference_pb2.StreamControl.KIND_FINALIZE_UTTERANCE:
                         for resp in _force_finalize(recognizer, online_stream):
                             if resp.HasField("hypothesis") and resp.hypothesis.is_final:
+                                final_text = resp.hypothesis.text
                                 logger.info(
                                     "raw_engine_final session_id=%s text=%s",
                                     session_id,
-                                    repr(resp.hypothesis.text[:120]),
+                                    repr(final_text[:120]),
+                                )
+                                _warn_if_empty(
+                                    session_id, final_text,
+                                    audio_samples_received, sample_rate,
                                 )
                             yield resp
                         last_text = ""
+                        ever_got_partial = False
                     elif kind == inference_pb2.StreamControl.KIND_CANCEL:
                         recognizer.reset(online_stream)
                         last_text = ""
+                        ever_got_partial = False
 
         except Exception:
             logger.exception("error in stream session_id=%s", session_id)
             return
 
-        yield from _flush(recognizer, online_stream)
+        for resp in _flush(recognizer, online_stream):
+            if resp.HasField("hypothesis") and resp.hypothesis.is_final:
+                _warn_if_empty(
+                    session_id, resp.hypothesis.text,
+                    audio_samples_received, sample_rate,
+                )
+            yield resp
         logger.info("stream finished session_id=%s", session_id)
