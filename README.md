@@ -122,6 +122,7 @@ Each component lives in its own repository under the `speechmux` GitHub organiza
 | [`plugin-stt`](https://github.com/speechmux/plugin-stt) | Python | STT plugin base (servicer, InferenceEngine + StreamingInferenceEngine Protocols, Dummy engine) |
 | [`plugin-stt-sherpa-onnx`](https://github.com/speechmux/plugin-stt-sherpa-onnx) | Python | sherpa-onnx Zipformer streaming engine (CPU/ARM, any language) |
 | [`plugin-stt-mlx-whisper`](https://github.com/speechmux/plugin-stt-mlx-whisper) | Python | mlx-whisper batch engine (MLX, Apple Silicon) |
+| [`plugin-stt-faster-whisper`](https://github.com/speechmux/plugin-stt-faster-whisper) | Python | faster-whisper batch engine (CTranslate2, CPU/CUDA) |
 
 ### Clients
 
@@ -151,6 +152,7 @@ make clone-base                    # proto, core, plugin-vad, plugin-stt
 make clone-vad IMPL=silero         # plugin-vad-silero
 make clone-stt IMPL=sherpa-onnx    # CPU / ARM streaming Zipformer (recommended)
 make clone-stt IMPL=mlx-whisper    # Apple Silicon MLX batch engine
+make clone-stt IMPL=faster-whisper # CTranslate2 batch engine (CPU / CUDA)
 
 make clone-web                     # client-web (optional)
 make clone-cli                     # client-cli (optional)
