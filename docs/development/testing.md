@@ -163,3 +163,38 @@ Tracked in [../plans/roadmap.md](../plans/roadmap.md) and
   utterance end at the default `vad_silence_sec`.
 - Adding an `ERR####` code means adding a row to `contract_test.go` — the completeness test
   fails otherwise.
+
+---
+
+## End-to-end
+
+No unit suite exercises Core + VAD + STT + a client together. The
+[`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill does, against a running stack, and
+its `scripts/smoke.sh` automates the CLI half.
+
+Baseline (2026-09-11, Docker Compose stack rebuilt from repo HEAD, Apple Silicon):
+
+| Path | Engine | Result |
+|------|--------|--------|
+| CLI `speechmux file` fast | sherpa-onnx | ✅ 1 final, 14 partials, RTF ≈ 0.06 |
+| CLI `speechmux file --realtime` | sherpa-onnx | ✅ same text, RTF ≈ 1.06 |
+| CLI `speechmux file` fast | faster-whisper (small, cpu) | ✅ 2 finals with timestamps, RTF ≈ 0.2 |
+| CLI `speechmux file --realtime` | faster-whisper | ✅ RTF ≈ 1.35 |
+| Web file upload, realtime pacing | sherpa-onnx, faster-whisper, Auto | ✅ Done in ≈ audio + 2 s; Stop → Finishing → Done |
+| Web microphone | — | ⏭️ not testable from the Chrome-MCP window (no mic device) |
+| Batch panel | — | ⏭️ not exercised end to end yet |
+
+What the first E2E run found — every one of these had a green unit suite:
+
+- `deploy/docker/core-docker.yaml` had `vad_watermark_lag_threshold_sec: 5.0`, so **every**
+  file upload died with ERR3004. Fixed to `0` (matches native).
+- The running `core` image was 4 months old and the `stt-faster-whisper` image reported
+  `STREAMING_MODE_UNSPECIFIED`; the current Core's strict `RouteBatch()` then excluded it and
+  every final decode failed with ERR2005. Rebuilt both images.
+- Web client: per-chunk `setTimeout` pacing collapsed to 1 s/chunk in a background tab
+  (5.6 s file → 67 s) and the EPD split utterances mid-word; decoding the file in a
+  device-rate `AudioContext` plus box-filter downsampling changed the recognised text and
+  dropped the final syllables. Both fixed in `client-web`.
+
+Open Core/CLI issues surfaced by E2E are tracked in
+[../plans/roadmap.md](../plans/roadmap.md#findings-from-end-to-end-testing).

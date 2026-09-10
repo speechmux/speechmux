@@ -22,6 +22,13 @@ Status: partially done. Verified against the current tree and in the browser (Ch
   late connect failure does not raise a banner.
 - Mic permission / device errors mapped to user-facing banner text.
 - `suppressHydrationWarning` on `<html>` for the pre-hydration theme script.
+- File send paced against the wall clock; background-tab timer throttling no longer stretches
+  a 5.6 s upload to 67 s or lets the EPD split words.
+- Uploaded files decoded directly at 16 kHz (`AudioContext({ sampleRate })`) instead of
+  device rate + box-filter downsample; web and CLI transcripts now match.
+- Dock buttons use `aria-keyshortcuts="Space"` instead of `title`, which was overriding the
+  accessible name.
+- Default VAD threshold 0.65 → 0.5 to match Core.
 
 ## Remaining
 

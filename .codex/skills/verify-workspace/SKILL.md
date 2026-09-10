@@ -149,7 +149,9 @@ Expect no output. A `DRIFT` line means someone edited a copy instead of the temp
 
 ### 8. Runtime (when the change warrants it)
 
-Needs real model weights and a full `make setup`:
+Use the [`e2e-test`](../e2e-test/SKILL.md) skill — it drives real audio through the CLI and the
+web client against a running stack and knows the pitfalls (stale images, bind-mounted
+configs). The bare minimum, if a stack is already up, is:
 
 ```bash
 make up PROFILES="silero sherpa-onnx"

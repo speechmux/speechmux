@@ -105,6 +105,19 @@ endpoint simply stays circuit-open.
 `NEXT_PUBLIC_*` at build time. Changing `API_PORT` requires `make docker-build`, not just
 `docker-up`.
 
+### Editing configs and rebuilding
+
+- `deploy/docker/*.yaml` are **single-file bind mounts**. Editing one on the host with an
+  editor or `sed -i` creates a new inode that the running container does not see, so
+  `POST /admin/reload` reloads the *old* file. After any edit: `docker compose up -d <service>`
+  (recreates the container and the mount).
+- Images do not rebuild themselves. `docker compose up -d` after a `git pull` in `core/` or a
+  plugin repo still runs the old image. Check `docker compose images` (CREATED column) and
+  `make docker-build` when in doubt — a stale `stt-*` image that predates the plugin
+  framework's `STREAMING_MODE_BATCH_ONLY` fix is excluded from batch routing by a current
+  Core and every decode fails with ERR2005.
+- Verify a rebuilt stack with the [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill.
+
 ### Models
 
 sherpa-onnx needs downloaded Zipformer checkpoints. `MODELS_DIR` (default

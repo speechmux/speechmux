@@ -128,6 +128,9 @@ cd <plugin-dir> && ../.venv/bin/python3 -m pytest tests/ -q
 `make test` currently **hangs** in `plugin-stt-sherpa-onnx`. See
 [docs/development/testing.md](docs/development/testing.md#known-issues) before running it.
 
+Unit suites do not exercise Core + plugins + clients together. For any change to Core, a
+plugin, a client or `deploy/`, also run the `e2e-test` skill against a running stack.
+
 ### Lint / format / typecheck
 
 ```bash
@@ -309,6 +312,7 @@ one copy of each skill.
 | [`add-config-option`](.codex/skills/add-config-option/SKILL.md) | Adding a key to `core.yaml` or a plugin config |
 | [`add-error-code`](.codex/skills/add-error-code/SKILL.md) | Introducing a new `ERR####` code |
 | [`verify-workspace`](.codex/skills/verify-workspace/SKILL.md) | Running the full build/test/lint sweep before finishing |
+| [`e2e-test`](.codex/skills/e2e-test/SKILL.md) | Transcribing real audio through CLI and web against a running stack |
 
 Read the whole `SKILL.md` before starting; each lists prerequisites, the file list, the
 verification step and the common mistakes. When a workflow you just performed is missing

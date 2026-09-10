@@ -92,6 +92,7 @@ symlink to that directory, so there is exactly one copy of each skill.
 | [add-config-option](../.codex/skills/add-config-option/SKILL.md) | Adding a YAML config key |
 | [add-error-code](../.codex/skills/add-error-code/SKILL.md) | Introducing a new `ERR####` code |
 | [verify-workspace](../.codex/skills/verify-workspace/SKILL.md) | Running the full build/test/lint sweep |
+| [e2e-test](../.codex/skills/e2e-test/SKILL.md) | Real audio through CLI and web against a running stack |
 
 ## Per-repository instructions
 

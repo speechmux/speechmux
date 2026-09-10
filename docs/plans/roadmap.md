@@ -15,6 +15,21 @@ reasoning to an ADR in [../decisions/](../decisions/) instead.
 | `decode_profile` and `task` never reach the STT plugin | `core` | [decode-options-and-task-passthrough.md](decode-options-and-task-passthrough.md) |
 | VAD `optimal_frame_ms` is ignored; frame size is hardcoded to 30 ms | `core` | [vad-frame-size-negotiation.md](vad-frame-size-negotiation.md) |
 
+## Findings from end-to-end testing
+
+Surfaced by the [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill on 2026-09-11.
+Reproduction steps are in that skill; none of these is covered by a unit test today.
+
+| Item | Where | Detail |
+|------|-------|--------|
+| Pipeline errors reach clients as ERR3002 | `core` | `ProcessSession` returns `sttErr.ToGRPC()` (a gRPC status error); `transport` then calls `errors.ToErrorSpec(pipelineErr)`, whose `errors.As(*STTError)` fails, so an ERR3004 VAD failure is sent as ERR3002 with `retryable=false`. Return the `*STTError` and convert at the transport boundary, or parse the `ERR####` prefix in `ToErrorSpec` |
+| Failed final decode looks like silence | `core` | When the batch final decode fails (ERR2005 in the run above), `batchDecodeEngine` logs a WARN and the session ends cleanly with zero results; the CLI prints "(no speech detected)". A decode failure must surface as an error result or `StreamError` |
+| Streaming results carry no timestamps | `core` | WS/gRPC results from `streamingDecodeEngine` have `start_sec = end_sec = 0`; batch results have real values. Derive them from the audio position tracked in `audioRing` |
+| `engine_name` missing on the batch path | `core` | `sess.SetEngineUsed` is called only in the streaming branch of `ProcessSession`; batch sessions send `engine_name=""` and the web client shows "auto". Set it from the routed client on the batch path too |
+| CLI `--metrics` `text` holds only the last final | `client-cli` | `commands/_output.py` builds `text` from the last result, not the joined finals (`results: 2, text: " 오늘 날씨가 정말 좋네요"`) |
+| Dummy engines are not a `workspace.yaml` profile | workspace | `make up` cannot start the no-model stack; the dummy configs exist but must be launched by hand. Add `dummy` profiles so the protocol-level E2E needs no models |
+| Batch panel not covered end to end | `client-web` | The e2e skill exercises file and CLI paths; the multi-file Batch panel still needs a run |
+
 ## Client UX
 
 [client-web-ux.md](client-web-ux.md) — what was fixed in the web client's UI review and

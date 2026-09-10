@@ -217,6 +217,9 @@ already in flight.
 
 Verified by comparing key sets on the current tree:
 
+- `deploy/docker/core-docker.yaml` used to set `stream.vad_watermark_lag_threshold_sec: 5.0`
+  while the native file has `0`; that made every Docker file upload fail with ERR3004 and was
+  aligned to `0` on 2026-09-11.
 - `deploy/docker/core-docker.yaml` still sets `decode.max_pending`, which no longer exists
   in `config.DecodeConfig` (it was removed with `DecodeScheduler.Submit()`). Unknown keys
   are ignored by the loader, so this is inert but misleading.
