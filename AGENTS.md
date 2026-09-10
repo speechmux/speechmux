@@ -3,7 +3,7 @@
 Working instructions for AI agents in this repository. Read this first, then follow the
 links below for the area you are changing.
 
-`CLAUDE.md` is a symlink to this file. Do not create a second copy of these rules.
+`CLAUDE.md` contains only `@AGENTS.md`, which imports this file. Do not create a second copy of these rules.
 
 ---
 
@@ -54,7 +54,9 @@ speechmux/                     ← this repo (workspace)
 (`make clone-base`, `make clone-stt IMPL=<engine>`, `make clone-vad IMPL=<engine>`,
 `make clone-web`, `make clone-cli`) rather than assuming the code does not exist.
 
-Each `plugin-*` directory has its own `AGENTS.md`. The two host frameworks (`plugin-vad`,
+Every component repo that has an `AGENTS.md` also has a one-line `CLAUDE.md` containing
+`@AGENTS.md`, so Claude Code imports the same rules. `core/` has its own `AGENTS.md` with Core-specific invariants, test
+conventions and the package map. Each `plugin-*` directory has one too. The two host frameworks (`plugin-vad`,
 `plugin-stt`) have hand-written ones. Every **engine** repo (`plugin-vad-*`, `plugin-stt-*`)
 carries a byte-identical `AGENTS.md` copied from `plugin-{vad,stt}/templates/AGENTS.md`,
 and puts everything engine-specific in `ENGINE.md` beside it. Read the root file, then the

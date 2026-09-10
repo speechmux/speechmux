@@ -94,11 +94,13 @@ symlink to that directory, so there is exactly one copy of each skill.
 
 ## Per-repository instructions
 
-Each plugin repository carries an `AGENTS.md` that assumes the root
-[../AGENTS.md](../AGENTS.md) and adds only what is specific to it.
+Each component repository carries an `AGENTS.md` that assumes the root
+[../AGENTS.md](../AGENTS.md) and adds only what is specific to it, plus a
+one-line `CLAUDE.md` containing `@AGENTS.md` so Claude Code imports the same file.
 
 | Repo kind | `AGENTS.md` | Engine-specific rules |
 |-----------|-------------|-----------------------|
+| Core (`core/`) | Hand-written: package map, pipeline invariants, Go test conventions | — |
 | Host frameworks (`plugin-vad/`, `plugin-stt/`) | Hand-written per repo | — |
 | Engine adapters (`plugin-vad-*/`, `plugin-stt-*/`) | **Byte-identical copy** of `plugin-{vad,stt}/templates/AGENTS.md` | `ENGINE.md` beside it |
 

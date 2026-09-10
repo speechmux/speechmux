@@ -39,6 +39,7 @@ layout is the same for every engine:
 ```
 plugin-stt-<impl>/
 ├── AGENTS.md                 # cp plugin-stt/templates/AGENTS.md — do NOT edit the copy
+├── CLAUDE.md                 # one line: @AGENTS.md
 ├── ENGINE.md                 # cp plugin-stt/templates/ENGINE.md, then fill it in
 ├── LICENSE
 ├── Makefile                  # copy verbatim from plugin-stt-faster-whisper
@@ -56,6 +57,7 @@ Two files come straight from the host framework's `templates/` directory:
 ```bash
 cp plugin-stt/templates/AGENTS.md plugin-stt-<impl>/AGENTS.md   # byte-identical, never edited here
 cp plugin-stt/templates/ENGINE.md plugin-stt-<impl>/ENGINE.md   # fill in every <placeholder>
+printf '@AGENTS.md\n' > plugin-stt-<impl>/CLAUDE.md           # import, not a copy
 ```
 
 (`plugin-vad/templates/` for a VAD engine.) `AGENTS.md` holds the rules common to every
@@ -332,7 +334,8 @@ retries in the background, so wait one health-probe interval before concluding i
 - [ ] The engine repo exists with `pyproject.toml`, `Makefile`, `README.md`, `LICENSE`,
       `src/`, `tests/`.
 - [ ] `AGENTS.md` is byte-identical to `plugin-{stt,vad}/templates/AGENTS.md`
-      (`cmp` returns 0) and `ENGINE.md` has no `<placeholder>` left.
+      (`cmp` returns 0), `ENGINE.md` has no `<placeholder>` left, and `CLAUDE.md` contains
+      exactly `@AGENTS.md`.
 - [ ] `list_engines()` includes the engine name.
 - [ ] `pytest`, `ruff check src/`, `mypy src/` all pass **without** the ML runtime installed.
 - [ ] The plugin process starts and binds its socket/address.

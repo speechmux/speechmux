@@ -38,8 +38,11 @@ engine repo needs no change to the workspace build.
 
 - A single logical change can span several repositories and needs several commits, in
   proto-first order. There is no atomic cross-repo commit.
-- Core's dependency on `github.com/speechmux/proto` is a published Go module, so consuming
-  a brand-new proto field needs a tag (or a local `replace` while iterating).
+- `core/go.mod` pins `github.com/speechmux/proto v0.0.0` with a **committed**
+  `replace github.com/speechmux/proto => ../proto`, so Core always builds against the
+  sibling `proto/` checkout. A proto change is visible to Core immediately, and `proto/`
+  must be cloned beside `core/` for Core to build at all — but there is no version pin
+  between the two repos.
 - Because component directories are gitignored in the workspace, files placed inside them —
   including their `AGENTS.md` — belong to those repos and must be committed there.
 - Only `proto` has CI. Everything else is verified locally, which is why

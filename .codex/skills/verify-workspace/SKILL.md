@@ -140,9 +140,12 @@ Every engine repo's `AGENTS.md` must be byte-identical to its host framework's t
 for d in plugin-stt-*/; do cmp -s plugin-stt/templates/AGENTS.md "$d/AGENTS.md" || echo "DRIFT: $d"; done
 for d in plugin-vad-*/; do cmp -s plugin-vad/templates/AGENTS.md "$d/AGENTS.md" || echo "DRIFT: $d"; done
 grep -l '<placeholder>\|<engine_name>\|<impl>' plugin-*-*/ENGINE.md 2>/dev/null && echo "unfilled ENGINE.md above"
+for d in core plugin-*/; do [ "$(cat "$d/CLAUDE.md" 2>/dev/null)" = "@AGENTS.md" ] || echo "CLAUDE.md is not '@AGENTS.md': $d"; done
 ```
 
-Expect no output. A `DRIFT` line means someone edited a copy instead of the template.
+Expect no output. A `DRIFT` line means someone edited a copy instead of the template; a
+`CLAUDE.md` line means a repo's `CLAUDE.md` is missing or holds something other than the
+`@AGENTS.md` import.
 
 ### 8. Runtime (when the change warrants it)
 

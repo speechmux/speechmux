@@ -9,7 +9,7 @@ How the multi-repo workspace fits together and which commands actually work.
 This repository is workspace glue only. It tracks:
 
 ```
-AGENTS.md  CLAUDE.md -> AGENTS.md  README.md  LICENSE
+AGENTS.md  CLAUDE.md (@AGENTS.md)  README.md  LICENSE
 Makefile  workspace.yaml  docker-compose.yml  .env.example
 .dockerignore  .gitignore
 deploy/docker/*.yaml
@@ -194,9 +194,11 @@ Details for Docker and remote access: [../operations/deployment.md](../operation
 6. Workspace: update `docs/`, and any config file or `docker-compose.yml` entry involved.
 7. Commit **per repository**. Nothing in a sub-repo is committed by a commit here.
 
-Because `core/go.mod` depends on the published `github.com/speechmux/proto` module, a Core
-change that consumes a brand-new proto field needs the proto repo tagged and
-`go.mod`/`go.sum` updated, or a local `replace` directive while iterating.
+`core/go.mod` carries a committed `replace github.com/speechmux/proto => ../proto`, so
+Core builds against whatever is checked out in the sibling `proto/` directory. A regenerated
+`proto/gen/go` is visible to Core immediately with no tag or `go.mod` change — which also
+means `proto/` must be cloned for Core to build, and the two checkouts must be kept at
+compatible commits by hand.
 
 ---
 

@@ -90,16 +90,11 @@ Do not mix a toolchain upgrade into a feature commit.
 
 ### 5. Update Go Core
 
-`core/go.mod` depends on the **published** `github.com/speechmux/proto` module, not the
-local directory. To consume a new field before the proto repo is tagged, add a temporary
-replace while iterating:
-
-```
-replace github.com/speechmux/proto => ../proto
-```
-
-Remove it before committing, and update `go.mod`/`go.sum` to the real tag once the proto
-change is released.
+`core/go.mod` carries a **committed** `replace github.com/speechmux/proto => ../proto`, so
+Core compiles against the sibling `proto/` checkout directly. Your regenerated
+`proto/gen/go` is visible to Core as soon as `make generate` finishes — no tag, no `go.mod`
+edit. The flip side: `core` and `proto` have no version pin between them, so commit the
+proto change first and note the proto commit in the Core commit message.
 
 Then:
 
@@ -185,9 +180,10 @@ Then end to end: `make up` and a real transcription through both the CLI and the
   buries the real change.
 - **Forgetting the WebSocket side.** It is hand-written Go, not generated, so a `client.proto`
   change does not propagate to it automatically.
-- **Assuming a local `proto/` edit is visible to Core.** `core/go.mod` uses the published
-  module. Without a `replace`, Go builds against the old version and you will chase a
-  phantom compile error.
+- **Forgetting that Core builds against `../proto` directly.** The committed `replace` in
+  `core/go.mod` means an un-regenerated or half-edited `proto/gen/go` breaks the Core build
+  immediately, and a Core commit can silently depend on an uncommitted proto change. Commit
+  proto first.
 - **Changing an engine `Protocol` without updating every adapter.** They live in separate
   repos and will not fail your build — they fail at runtime.
 

@@ -383,8 +383,8 @@ Every plugin test suite mocks its ML runtime, so no model weights are required â
 | [docs/decisions/](docs/decisions/) | Architecture decision records |
 | [docs/plans/roadmap.md](docs/plans/roadmap.md) | What is not built yet |
 
-Contributing with an AI agent? Start at [AGENTS.md](AGENTS.md) (`CLAUDE.md` is a symlink to
-it). Repeatable workflows live in [.codex/skills/](.codex/skills/), and each `plugin-*`
+Contributing with an AI agent? Start at [AGENTS.md](AGENTS.md) (`CLAUDE.md` just
+imports it). Repeatable workflows live in [.codex/skills/](.codex/skills/), and each `plugin-*`
 repository carries its own `AGENTS.md`.
 
 ## License
