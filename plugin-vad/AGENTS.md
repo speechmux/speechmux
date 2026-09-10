@@ -78,8 +78,9 @@ Known baseline (do not report as regressions, and see
 ## Engine repos share one `AGENTS.md`, owned here
 
 Every `plugin-vad-*` repository carries a byte-identical `AGENTS.md` copied from
-`templates/AGENTS.md`, plus its own `ENGINE.md` for engine-specific rules. A new engine
-author copies both templates and fills in `ENGINE.md` only.
+`templates/AGENTS.md`, plus its own `ENGINE.md` for engine-specific rules, plus a
+`CLAUDE.md` containing only `@AGENTS.md`. A new engine author copies both templates, adds
+that one-line file, and fills in `ENGINE.md` only.
 
 When you change `templates/AGENTS.md`, re-copy it into **every** engine repo in the same
 piece of work, and verify with:
