@@ -346,21 +346,46 @@ Plugin errors (`PluginErrorCode`) are translated to Core `ERR####` codes at the 
 make test    # Go tests + pytest for every cloned plugin-* and client-cli
 ```
 
-Or run each suite directly:
+Or run each suite directly (`PY=$PWD/.venv/bin/python3`):
 
 ```bash
-cd core && go test -race ./...
+cd core && go test ./...                      # add -race for concurrency changes
 
-cd plugin-vad && uv run pytest tests/ -v && ruff check src/ && mypy src/
-cd plugin-vad-silero && uv run pytest tests/ -v
-cd plugin-stt && uv run pytest tests/ -v && ruff check src/ && mypy src/
-cd plugin-stt-sherpa-onnx && uv run pytest tests/ -v
+cd plugin-vad  && $PY -m pytest tests/ -q     # 11 passing
+cd plugin-stt  && $PY -m pytest tests/ -q     # 38 passing
+cd plugin-stt-mlx-whisper    && $PY -m pytest tests/ -q
+cd plugin-stt-faster-whisper && $PY -m pytest tests/ -q
+cd client-cli  && $PY -m pytest tests/ -q     # 29 passing
 
-cd client-cli && uv run pytest tests/ -v
-
-cd client-web/web && npm run lint
-cd client-web/api && uv run pytest tests/ -v
+cd client-web/web && npx tsc --noEmit && npm run lint
 ```
+
+Every plugin test suite mocks its ML runtime, so no model weights are required —
+`plugin-vad-silero` is the exception and needs a real `torch` install.
+
+> **`make test` currently hangs** in `plugin-stt-sherpa-onnx`, and a few suites have
+> pre-existing lint/typecheck failures. The exact status of every command, and the fixes,
+> are in [docs/development/testing.md](docs/development/testing.md#known-issues).
+
+## Documentation
+
+| Read | For |
+|------|-----|
+| [docs/README.md](docs/README.md) | Documentation index — start here |
+| [docs/architecture/overview.md](docs/architecture/overview.md) | System structure, processes, decode paths |
+| [docs/architecture/core-pipeline.md](docs/architecture/core-pipeline.md) | Session lifecycle, buffering, EPD, decode engines |
+| [docs/architecture/plugin-system.md](docs/architecture/plugin-system.md) | How plugins and engines fit together |
+| [docs/api/client-protocol.md](docs/api/client-protocol.md) | gRPC, WebSocket and HTTP admin APIs |
+| [docs/api/error-codes.md](docs/api/error-codes.md) | The `ERR####` registry |
+| [docs/operations/configuration.md](docs/operations/configuration.md) | Every config file and key |
+| [docs/operations/deployment.md](docs/operations/deployment.md) | Native `ctl`, Docker Compose, Tailscale |
+| [docs/development/workspace.md](docs/development/workspace.md) | Setup, build, verified commands, conventions |
+| [docs/decisions/](docs/decisions/) | Architecture decision records |
+| [docs/plans/roadmap.md](docs/plans/roadmap.md) | What is not built yet |
+
+Contributing with an AI agent? Start at [AGENTS.md](AGENTS.md) (`CLAUDE.md` is a symlink to
+it). Repeatable workflows live in [.codex/skills/](.codex/skills/), and each `plugin-*`
+repository carries its own `AGENTS.md`.
 
 ## License
 

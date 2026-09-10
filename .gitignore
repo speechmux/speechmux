@@ -8,8 +8,11 @@ client-*/
 # Python virtual environment (workspace-level .venv used by Makefile)
 .venv/
 
-# Claude Code local state (memory, session files)
-.claude/
+# Claude Code local state. .claude/skills is tracked — it is a symlink to
+# .codex/skills/, which is the canonical source for agent skills.
+.claude/*
+!.claude/skills
+.claude/settings.local.json
 
 # Sample audio files (not tracked — no references in docs or Makefile)
 assets/
