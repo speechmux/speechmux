@@ -15,6 +15,12 @@ reasoning to an ADR in [../decisions/](../decisions/) instead.
 | `decode_profile` and `task` never reach the STT plugin | `core` | [decode-options-and-task-passthrough.md](decode-options-and-task-passthrough.md) |
 | VAD `optimal_frame_ms` is ignored; frame size is hardcoded to 30 ms | `core` | [vad-frame-size-negotiation.md](vad-frame-size-negotiation.md) |
 
+## Client UX
+
+[client-web-ux.md](client-web-ux.md) — what was fixed in the web client's UI review and
+the items still open (profile naming, theme toggle placement, `lang`, logs panel, batch
+export, session summary).
+
 ## Test and tooling gaps
 
 [test-and-lint-gaps.md](test-and-lint-gaps.md) — nine items, from a suite that hangs and

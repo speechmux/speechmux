@@ -76,6 +76,7 @@ Work that is **not yet built**. A plan is deleted when it ships.
 | [plans/decode-options-and-task-passthrough.md](plans/decode-options-and-task-passthrough.md) | `decode_profile` and `task` never reach the STT plugin |
 | [plans/vad-frame-size-negotiation.md](plans/vad-frame-size-negotiation.md) | Core ignores the VAD plugin's `optimal_frame_ms` |
 | [plans/test-and-lint-gaps.md](plans/test-and-lint-gaps.md) | Nine verified test and tooling gaps, including a suite that hangs |
+| [plans/client-web-ux.md](plans/client-web-ux.md) | Web client UI review: what was fixed and what is still open |
 
 ---
 
