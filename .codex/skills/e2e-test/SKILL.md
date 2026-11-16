@@ -95,16 +95,39 @@ cd client-web/web && NEXT_PUBLIC_API_PORT=8000 npm run dev -- --port 3021
 In Chrome (the Claude-in-Chrome tools work; put the test WAV in the session scratchpad so
 `file_upload` may read it):
 
-1. Input → **Audio file**, choose the WAV, keep **Realtime pacing** on.
+1. Mode switch (top of the setup card) → **Audio file**, choose the WAV, keep **Realtime
+   pacing** on.
 2. Engine → pick each engine in turn; also once on Auto.
-3. **Send file**. Expect: Connection Ready → Transfer Sending with a progress bar → partial
-   lines → finals → Connection Done / Transfer Completed / Result Done, all within
-   ≈ audio length + 2 s. Logs show `Connecting to ws://…`, `Connected`, `Final: …`,
+3. **Send file**. Expect: the setup card folds into a one-line summary; Connection Ready →
+   Transfer Sending, with the elapsed time and a progress bar in the bottom dock → partial
+   lines → finals → Connection Done / Transfer Completed / Result Done and a "Session
+   complete — N utterances …" line under the transcript, all within ≈ audio length + 2 s.
+   Open **Logs** (collapsed by default): `Connecting to ws://…`, `Connected`, `Final: …`,
    `Session done.`
-4. **Send file** again and press **Stop** after ~2 s. Expect Transfer/Result "Finishing",
-   the Start button disabled reading "Finishing…", then a final line and "Session done."
-5. Mic mode needs a machine with a microphone; the Chrome-MCP window has none, so expect the
+4. **Send file** again and press **Stop** (the same button) after ~2 s. Expect
+   Transfer/Result "Finishing", the button disabled reading "Finishing…", then a final line
+   and "Session done."
+5. **Batch**: add two files, **Start**. Expect "2 of 2 done", then check the **JSON** and
+   **TXT** downloads and one file's **Download SRT**.
+6. Mic mode needs a machine with a microphone; the Chrome-MCP window has none, so expect the
    "No microphone was found" banner there — that is the correct behaviour, not a failure.
+
+**Without the Chrome extension**, drive the system Chrome headless instead: `npm install
+playwright-core` in the session scratchpad and launch with
+`chromium.launch({ channel: "chrome" })`. The same expectations apply; `setInputFiles`
+replaces `file_upload`. Two things this route can do that the extension cannot:
+
+- **Mic path.** Headless Chrome cannot open an audio device — `getUserMedia` never settles,
+  even with the fake-device flags, and the page waits at "Waiting for microphone…". To
+  exercise everything downstream of capture, replace `AudioContext`, `AudioWorkletNode` and
+  `navigator.mediaDevices.getUserMedia` in `page.addInitScript` with fakes whose worklet
+  node posts the WAV's PCM to `port.onmessage` in 80 ms chunks. That is not a substitute
+  for one run with a real microphone.
+- **Silent Reconnect.** `page.routeWebSocket(/\/ws\/stream/, …)` with
+  `ws.connectToServer()`, then `ws.close()` mid-session. Expect a "reconnecting (attempt 1
+  of 3)" banner and `Reconnecting 1/3`, then Ready and new transcript lines; refuse three
+  attempts in the route handler and expect the "connection was lost and could not be
+  restored" banner.
 
 Compare the web transcript with the CLI transcript for the same engine. They should match
 word for word; a difference means the web audio path (decode/resample/pacing) is altering
@@ -146,6 +169,15 @@ in [docs/plans/roadmap.md](../../../docs/plans/roadmap.md).
 - **Chrome-MCP click quirks.** Clicking a dock button by `ref` sometimes does not fire the
   React handler; click by coordinates from a fresh screenshot instead. `form_input` on the
   Engine select can leave the control looking blank even though state was set.
+- **Start and Stop are one button.** Presses less than 350 ms apart count as one, so a
+  script that clicks Start and Stop back to back only starts. Wait between them.
+- **Realtime pacing off loses utterances.** A long file sent unpaced comes back as its last
+  sentence only, from the CLI as well — a Core issue on the batch path (roadmap), not a web
+  regression. Judge the web client with pacing on, and keep Batch-panel test files short
+  (the panel always sends unpaced).
+- **One WebSocket message ≤ 32 768 bytes.** Core closes the connection on anything larger.
+  This is what made the web client's reconnect loop forever before it replayed its 2 s
+  overlap in 80 ms frames; suspect it whenever a session dies right after a large send.
 - **VAD threshold defaults.** The web client's threshold must match Core's `vad_threshold`
   (0.5). A higher value classifies quiet syllables as silence and the EPD cuts mid-word.
 
@@ -157,6 +189,7 @@ in [docs/plans/roadmap.md](../../../docs/plans/roadmap.md).
 - [ ] Transcripts match the expected shape above; no truncated tail, no mid-word split.
 - [ ] Web file upload completes in ≈ audio length + 2 s and reaches Done; Stop → Finishing →
       Done works.
+- [ ] Batch panel reaches "N of N done" and its JSON / TXT / SRT downloads open.
 - [ ] Web transcript matches the CLI transcript for the same engine.
 - [ ] `/admin/plugins` shows `engine_name` for every healthy endpoint.
 - [ ] Anything that failed is either fixed or written into `docs/plans/roadmap.md`.

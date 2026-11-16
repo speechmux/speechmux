@@ -17,8 +17,9 @@ reasoning to an ADR in [../decisions/](../decisions/) instead.
 
 ## Findings from end-to-end testing
 
-Surfaced by the [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill on 2026-09-11.
-Reproduction steps are in that skill; none of these is covered by a unit test today.
+Surfaced by the [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill on 2026-09-11
+and 2026-11-17. Reproduction steps are in that skill; none of these is covered by a unit
+test today.
 
 | Item | Where | Detail |
 |------|-------|--------|
@@ -28,13 +29,14 @@ Reproduction steps are in that skill; none of these is covered by a unit test to
 | `engine_name` missing on the batch path | `core` | `sess.SetEngineUsed` is called only in the streaming branch of `ProcessSession`; batch sessions send `engine_name=""` and the web client shows "auto". Set it from the routed client on the batch path too |
 | CLI `--metrics` `text` holds only the last final | `client-cli` | `commands/_output.py` builds `text` from the last result, not the joined finals (`results: 2, text: " 오늘 날씨가 정말 좋네요"`) |
 | Dummy engines are not a `workspace.yaml` profile | workspace | `make up` cannot start the no-model stack; the dummy configs exist but must be launched by hand. Add `dummy` profiles so the protocol-level E2E needs no models |
-| Batch panel not covered end to end | `client-web` | The e2e skill exercises file and CLI paths; the multi-file Batch panel still needs a run |
+| Faster-than-real-time file input loses utterances | `core` | A 30.8 s, 10-sentence WAV sent unpaced to `faster-whisper` returns one final — the last sentence — from `speechmux file`, from the web client with Realtime pacing off, and from the web Batch panel (which always sends unpaced). With `--realtime` / pacing on, all 10 arrive, identical in CLI and web. A 6 s, 2-sentence file is unaffected |
+| WebSocket read limit is implicit | `core` | Messages above 32 768 bytes close the connection because `websocket_handler.go` never calls `SetReadLimit`; the limit is the library default, not a setting. Make it explicit (and configurable) and answer with an `ERR####` instead of a bare close |
 
 ## Client UX
 
-[client-web-ux.md](client-web-ux.md) — what was fixed in the web client's UI review and
-the items still open (profile naming, theme toggle placement, `lang`, logs panel, batch
-export, session summary).
+[client-web-ux.md](client-web-ux.md) — what is still open in the web client after its UI
+review (decode profile has no effect, no RTF in the session summary, reconnect without
+`resume`, real-microphone verification).
 
 ## Test and tooling gaps
 

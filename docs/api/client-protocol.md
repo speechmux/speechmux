@@ -94,6 +94,11 @@ Render `committed_text` as settled and `unstable_text` as in-flight. How they ar
 Port `8091` by default (`server.ws_port`), on paths `/ws` and `/ws/stream`. Text frames
 carry JSON; binary frames carry raw audio in the session's configured encoding.
 
+A single WebSocket message may not exceed **32 768 bytes**. Core never raises the default
+read limit of its WebSocket library (`nhooyr.io/websocket`), so a larger message ends the
+session with a read error and closes the connection. Send audio in small frames — 80 ms of
+16 kHz `pcm_s16le` is 2 560 bytes.
+
 ### Client → server
 
 ```jsonc

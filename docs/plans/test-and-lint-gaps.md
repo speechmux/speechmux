@@ -43,15 +43,15 @@ propagation to the browser.
 Add `client-web/api/tests/` with `pytest` + `pytest-asyncio` against FastAPI's
 `TestClient`, with the Core WebSocket mocked.
 
-## 4. `client-web/web` has no test runner
+## 4. `client-web/web` — components untested, `next lint` deprecated
 
-Same repo. `package.json` has no `test` script. The transcript merge logic in `page.tsx`
-and `lib/speechmux-ws.ts` — baseline tracking, incremental extraction, the done-state gate,
-line capping — is pure and easy to test.
+Same repo. Vitest (`npm test`) covers the pure modules under `web/lib/`. Nothing tests the
+React side: the session state machine in `app/page.tsx` (Start / Stop / Finishing, capture
+errors, reconnect) and the components. Add `@testing-library/react` with a `jsdom`
+environment and cover the state transitions the `e2e-test` skill currently checks by hand.
 
-Add Vitest and cover those functions. Separately, `npm run lint` warns that `next lint` is
-removed in Next.js 16; migrate to the ESLint CLI
-(`npx @next/codemod@canary next-lint-to-eslint-cli .`).
+Separately, `npm run lint` warns that `next lint` is removed in Next.js 16; migrate to the
+ESLint CLI (`npx @next/codemod@canary next-lint-to-eslint-cli .`).
 
 ## 5. `plugin-vad` fails `mypy src/`
 

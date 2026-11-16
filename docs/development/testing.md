@@ -16,7 +16,7 @@ test.
 | Plugin framework | `plugin-vad/tests/`, `plugin-stt/tests/` | pytest against the servicer with a dummy engine |
 | Engine adapters | `plugin-*-<impl>/tests/` | pytest with the ML runtime mocked out |
 | CLI | `client-cli/tests/` | pytest with the gRPC client mocked |
-| Frontend | `client-web/web` | `tsc --noEmit` + ESLint only — no unit tests yet |
+| Frontend | `client-web/web/lib/*.test.ts` | Vitest, plain Node: transcript merging, the WebSocket client against a fake socket, settings, SRT. Components are covered only by `tsc --noEmit` + ESLint |
 
 **Core integration tests never start a Python process.** They implement the plugin gRPC
 servers in Go over `bufconn`, so the pipeline is exercised deterministically and the suite
@@ -47,6 +47,7 @@ cd core && go test ./internal/stream/ -run TestFair -v
 cd plugin-stt && ../.venv/bin/python3 -m pytest tests/ -q
 cd client-cli && ../.venv/bin/python3 -m pytest tests/ -q
 
+cd client-web/web && npm test                          # Vitest, lib/ only
 cd client-web/web && npx tsc --noEmit && npm run lint
 ```
 
@@ -94,13 +95,13 @@ Because `make test` iterates every cloned `plugin-*`, this hang blocks the whole
 `cd client-web/api && pytest tests/` command cannot work. The WebSocket proxy
 (`ws_proxy.py`), API-key injection and per-user session limiting are untested.
 
-### `client-web/web` has no test runner
+### `client-web/web` — components are untested
 
-`package.json` defines `dev`, `build`, `start`, `lint`, `type-check` — no `test`. The
-transcript-merging logic in `page.tsx` and `lib/speechmux-ws.ts` (baseline tracking,
-incremental extraction, done-state gating) is exactly the kind of code that wants unit
-tests. `npm run lint` also prints a deprecation notice: `next lint` is removed in Next.js
-16 and should migrate to the ESLint CLI.
+`npm test` (Vitest) covers the pure modules under `lib/`. The React side — the session
+state machine in `app/page.tsx` (Start / Stop / Finishing, capture errors, reconnect) and
+every component — has no unit tests; it is checked in a browser by the `e2e-test` skill.
+`npm run lint` also prints a deprecation notice: `next lint` is removed in Next.js 16 and
+should migrate to the ESLint CLI.
 
 ### `plugin-vad` — `mypy src/` fails
 
@@ -172,7 +173,9 @@ No unit suite exercises Core + VAD + STT + a client together. The
 [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill does, against a running stack, and
 its `scripts/smoke.sh` automates the CLI half.
 
-Baseline (2026-09-11, Docker Compose stack rebuilt from repo HEAD, Apple Silicon):
+Baseline (CLI rows: 2026-09-11, Docker Compose stack rebuilt from repo HEAD, Apple
+Silicon. Web rows: 2026-11-17, production build of the `client-web` working tree against
+that stack, driven by headless Chrome):
 
 | Path | Engine | Result |
 |------|--------|--------|
@@ -180,9 +183,10 @@ Baseline (2026-09-11, Docker Compose stack rebuilt from repo HEAD, Apple Silicon
 | CLI `speechmux file --realtime` | sherpa-onnx | ✅ same text, RTF ≈ 1.06 |
 | CLI `speechmux file` fast | faster-whisper (small, cpu) | ✅ 2 finals with timestamps, RTF ≈ 0.2 |
 | CLI `speechmux file --realtime` | faster-whisper | ✅ RTF ≈ 1.35 |
-| Web file upload, realtime pacing | sherpa-onnx, faster-whisper, Auto | ✅ Done in ≈ audio + 2 s; Stop → Finishing → Done |
-| Web microphone | — | ⏭️ not testable from the Chrome-MCP window (no mic device) |
-| Batch panel | — | ⏭️ not exercised end to end yet |
+| Web file upload, realtime pacing | sherpa-onnx, faster-whisper, Auto | ✅ Done in ≈ audio + 2 s; Stop → Finishing → Done; sherpa-onnx text identical to the CLI's |
+| Web microphone | sherpa-onnx | ⚠️ partials → final → Stop → Done with the capture API faked (the WAV fed through the app's own chunk → WebSocket → Core path). Headless Chrome cannot open an audio device, so real `getUserMedia` capture is still unverified |
+| Web Silent Reconnect | sherpa-onnx | ✅ socket dropped mid-session: attempt 1 → 2 → Ready, transcription resumes; three refused attempts → `RECONNECT_FAILED` |
+| Batch panel | Auto (2 files) | ✅ both done; JSON, TXT and per-file SRT export |
 
 What the first E2E run found — every one of these had a green unit suite:
 
@@ -195,6 +199,17 @@ What the first E2E run found — every one of these had a green unit suite:
   (5.6 s file → 67 s) and the EPD split utterances mid-word; decoding the file in a
   device-rate `AudioContext` plus box-filter downsampling changed the recognised text and
   dropped the final syllables. Both fixed in `client-web`.
+
+What the 2026-11-17 web run found:
+
+- Silent Reconnect had never survived a real disconnect: the 2 s overlap was replayed as
+  one 64 000-byte WebSocket message, Core closed the connection (32 768-byte read limit),
+  and the client reconnected in an endless loop. Fixed in `client-web` (80 ms replay
+  frames; the attempt counter resets only after 5 s of stability).
+- `/api/engines` was prerendered during `next build`, so a fresh container served the
+  built-in fallback engine list to its first visitor. Fixed in `client-web`.
+- A file sent faster than real time loses every utterance but the last on the batch path —
+  reproduced with the CLI, so it is Core's. Tracked in the roadmap.
 
 Open Core/CLI issues surfaced by E2E are tracked in
 [../plans/roadmap.md](../plans/roadmap.md#findings-from-end-to-end-testing).

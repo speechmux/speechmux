@@ -123,6 +123,7 @@ cd client-web/web && npm ci
 make test                                   # Go tests + pytest for every cloned plugin and client-cli
 cd core && go test ./...                    # Go only (add -race for the full check)
 cd <plugin-dir> && ../.venv/bin/python3 -m pytest tests/ -q
+cd client-web/web && npm test               # Vitest unit tests for lib/ (not part of `make test`)
 ```
 
 `make test` currently **hangs** in `plugin-stt-sherpa-onnx`. See

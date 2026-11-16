@@ -135,6 +135,7 @@ Run on the current tree; see [testing.md](testing.md) for details and the failur
 | `cd plugin-stt-sherpa-onnx && pytest tests/` | ❌ 4 fail, then the suite **hangs** |
 | `cd plugin-vad-silero && pytest tests/` | ⏭️ not run — needs a real `torch` install |
 | `cd client-cli && pytest tests/` | ✅ 29 passed |
+| `cd client-web/web && npm test` | ✅ Vitest, all passing |
 | `cd client-web/web && npx tsc --noEmit` | ✅ clean |
 | `cd client-web/web && npm run lint` | ✅ no warnings (with a `next lint` deprecation notice) |
 | `cd client-web/api && pytest tests/` | ❌ no `tests/` directory exists |

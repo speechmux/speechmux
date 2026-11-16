@@ -100,12 +100,14 @@ skipped it.
 ### 5. Frontend
 
 ```bash
+cd client-web/web && npm test             # expect: all Vitest tests pass (lib/ only)
 cd client-web/web && npx tsc --noEmit     # expect: clean
 cd client-web/web && npm run lint         # expect: no warnings (plus a next-lint deprecation notice)
 ```
 
-There is no `npm test` — no test runner is configured. `client-web/api` has no `tests/`
-directory, so any pytest command for it will fail; that is a gap, not a regression.
+`npm test` covers `web/lib/` only; components are checked in a browser by the `e2e-test`
+skill. `client-web/api` has no `tests/` directory, so any pytest command for it will fail;
+that is a gap, not a regression.
 
 ### 6. Config and deployment
 
