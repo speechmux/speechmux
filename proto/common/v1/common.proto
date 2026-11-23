@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/speechmux/proto/gen/go/common/v1;commonv1";
+
+// Compatibility policy:
+// If a field is removed from any message, reserve both its number and name.
+// Example:
+//   reserved 12;
+//   reserved "old_field_name";
+
+// PluginState represents the lifecycle state of a plugin process.
+enum PluginState {
+  PLUGIN_STATE_UNSPECIFIED = 0;
+  PLUGIN_STATE_LOADING  = 1; // Model is loading; not yet accepting requests
+  PLUGIN_STATE_READY    = 2; // Fully operational
+  PLUGIN_STATE_DRAINING = 3; // Shutting down gracefully; rejecting new requests
+  PLUGIN_STATE_ERROR    = 4; // Unrecoverable error
+}
+
+// PluginErrorCode enumerates recoverable errors reported by plugin processes.
+// Core maps these to ERR#### codes; plugins must never use ERR#### directly.
+enum PluginErrorCode {
+  PLUGIN_ERROR_UNSPECIFIED      = 0;
+  PLUGIN_ERROR_MODEL_LOADING    = 1; // Model not yet ready
+  PLUGIN_ERROR_MODEL_OOM        = 2; // GPU / memory exhausted
+  PLUGIN_ERROR_INVALID_AUDIO    = 3; // Bad audio format or length
+  PLUGIN_ERROR_INFERENCE_FAILED = 4; // Exception during inference
+  PLUGIN_ERROR_SESSION_NOT_FOUND = 5; // Unknown session_id
+  PLUGIN_ERROR_CAPACITY_FULL    = 6; // max_concurrent limit reached
+}
+
+// PluginHealthStatus is returned by HealthCheck RPCs.
+message PluginHealthStatus {
+  PluginState     state      = 1;
+  int32           active     = 2; // active_sessions (VAD) or inflight_requests (STT)
+  string          message    = 3; // Human-readable status detail
+  PluginErrorCode last_error = 4; // Last observed error code (for diagnostics)
+}

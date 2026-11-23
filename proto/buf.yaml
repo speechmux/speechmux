@@ -1,0 +1,26 @@
+version: v2
+
+lint:
+  use:
+    - STANDARD
+  except:
+    - ENUM_VALUE_PREFIX  # PluginErrorCode uses PLUGIN_ERROR_ prefix; PLUGIN_ERROR_CODE_ would be excessively verbose
+    - SERVICE_SUFFIX     # VADPlugin/InferencePlugin: adding "Service" suffix is redundant for plugin services
+  ignore_only:
+    RPC_REQUEST_STANDARD_NAME:
+      - vad/v1
+      - inference/v1
+    RPC_RESPONSE_STANDARD_NAME:
+      - vad/v1
+      - inference/v1
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - vad/v1
+      - inference/v1
+  ignore:
+    - gen/
+
+breaking:
+  use:
+    - FILE
+  ignore:
+    - gen/
