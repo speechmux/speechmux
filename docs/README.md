@@ -73,6 +73,7 @@ Work that is **not yet built**. A plan is deleted when it ships.
 | Document | Covers |
 |----------|--------|
 | [plans/roadmap.md](plans/roadmap.md) | Everything outstanding, plus what is deliberately unimplemented |
+| [plans/monorepo-migration.md](plans/monorepo-migration.md) | Hand-off for importing every component repository into this one, step by step |
 | [plans/decode-options-and-task-passthrough.md](plans/decode-options-and-task-passthrough.md) | `decode_profile` and `task` never reach the STT plugin |
 | [plans/vad-frame-size-negotiation.md](plans/vad-frame-size-negotiation.md) | Core ignores the VAD plugin's `optimal_frame_ms` |
 | [plans/test-and-lint-gaps.md](plans/test-and-lint-gaps.md) | Nine verified test and tooling gaps, including a suite that hangs |

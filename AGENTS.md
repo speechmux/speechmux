@@ -5,6 +5,13 @@ links below for the area you are changing.
 
 `CLAUDE.md` contains only `@AGENTS.md`, which imports this file. Do not create a second copy of these rules.
 
+> **Monorepo migration in progress on this branch.** Read
+> [docs/plans/monorepo-migration.md](docs/plans/monorepo-migration.md) before anything
+> else. Until it is finished, §2, §4 (`make clone-*`) and §5 rule 2 below still describe
+> the old multi-repo layout: do **not** run `make clone-*` here, and do not treat a missing
+> component directory as something to clone. This notice is removed in the last step of
+> that plan.
+
 ---
 
 ## 1. What this project is
