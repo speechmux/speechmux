@@ -10,10 +10,14 @@ reasoning to an ADR in [../decisions/](../decisions/) instead.
 
 ## Repository structure
 
-[monorepo-migration.md](monorepo-migration.md) — every component repository has been
-imported into this one, with history, on the `monorepo` branch
-([ADR 0015](../decisions/0015-monorepo.md)). Still open: pushing and merging the branch,
-and archiving the ten old repositories.
+Every component was imported into this repository on 2026-11-24
+([ADR 0015](../decisions/0015-monorepo.md)). Left over from that move:
+
+| Item | Where | Detail |
+|------|-------|--------|
+| Docker images predate the import | root | The `speechmux` Compose stack on the development machine still runs images built from the old checkouts in May and September 2026. Rebuild every image from this tree (`make docker-build`) and re-run the [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill including its web steps. Not done on 2026-11-24 because the host had 9 GiB free and the `vad-silero` image alone is 9.4 GB |
+| Web port binding differs from the running stack | root | The running `client-web-front` container publishes `127.0.0.1:3020`, from an uncommitted edit in an old checkout; `docker-compose.yml` here publishes `3020` on every interface. Decide which is intended before the rebuild |
+| `proto` and the host frameworks are not published | `proto`, `plugin-vad`, `plugin-stt` | No tags, no registry. Third-party engines and the hybrid split in ADR 0015 both wait on this. `.github/workflows/proto.yaml` still triggers its package build on `v*.*.*`, which is now a repository-wide tag pattern — switch to a prefixed tag (`proto/v*`) when publishing starts |
 
 ## Functional gaps in shipped features
 
