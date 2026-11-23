@@ -117,6 +117,9 @@ endpoint simply stays circuit-open.
   framework's `STREAMING_MODE_BATCH_ONLY` fix is excluded from batch routing by a current
   Core and every decode fails with ERR2005.
 - Verify a rebuilt stack with the [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill.
+- A port value in `.env` may carry a host address. `WEB_PORT=127.0.0.1:3020` publishes the
+  web client on loopback only, which is enough when remote users come in through Tailscale.
+  Do not do this with `API_PORT`: it is also the `NEXT_PUBLIC_API_PORT` build arg.
 
 ### Models
 
@@ -160,6 +163,13 @@ Browser `getUserMedia` requires a secure context, which is the reason this exist
 anything other than `localhost`. Tailscale terminates TLS and forwards plaintext to Core,
 so Core's own `tls.*` settings stay off in this setup. The Tailscale CLI must be installed
 separately (`brew install tailscale`) even when the Tailscale app is present.
+
+`WS_PORT` and the Compose `API_PORT` are both 8000. The script's header says to run it
+after `make docker-up`, and the order matters: with the Tailscale route already up,
+recreating `client-web-api` leaves host port 8000 unpublished. `docker ps` still shows
+`0.0.0.0:8000->8000`, nothing listens on `localhost:8000`, and the local web client cannot
+open its WebSocket (observed on OrbStack, 2026-11-24). Remote users are unaffected — their
+route goes to Core's 8091. Tracked in [../plans/roadmap.md](../plans/roadmap.md).
 
 ---
 
