@@ -173,17 +173,17 @@ No unit suite exercises Core + VAD + STT + a client together. The
 [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill does, against a running stack, and
 its `scripts/smoke.sh` automates the CLI half.
 
-Baseline (CLI rows: 2026-09-11, Docker Compose stack rebuilt from repo HEAD, Apple
-Silicon. Web rows: 2026-11-17, production build of the `client-web` working tree against
-that stack, driven by headless Chrome):
+Baseline (2026-11-24, Docker Compose stack rebuilt from `main` at `544c947`, Apple Silicon;
+web rows driven by headless Chrome against the `client-web-front` and `client-web-api`
+images. The microphone and Silent Reconnect rows are from 2026-11-17 and were not re-run):
 
 | Path | Engine | Result |
 |------|--------|--------|
 | CLI `speechmux file` fast | sherpa-onnx | ✅ 1 final, 14 partials, RTF ≈ 0.06 |
-| CLI `speechmux file --realtime` | sherpa-onnx | ✅ same text, RTF ≈ 1.06 |
+| CLI `speechmux file --realtime` | sherpa-onnx | ✅ same text, RTF ≈ 1.04 |
 | CLI `speechmux file` fast | faster-whisper (small, cpu) | ✅ 2 finals with timestamps, RTF ≈ 0.2 |
-| CLI `speechmux file --realtime` | faster-whisper | ✅ RTF ≈ 1.35 |
-| Web file upload, realtime pacing | sherpa-onnx, faster-whisper, Auto | ✅ Done in ≈ audio + 2 s; Stop → Finishing → Done; sherpa-onnx text identical to the CLI's |
+| CLI `speechmux file --realtime` | faster-whisper | ✅ RTF ≈ 1.31 |
+| Web file upload, realtime pacing | sherpa-onnx, faster-whisper, Auto | ✅ Done in ≈ audio + 0.5–2 s (6.1 s file: 6.6 s sherpa-onnx, 8.3 s faster-whisper); Stop → Finishing → Done; sherpa-onnx text identical to the CLI's |
 | Web microphone | sherpa-onnx | ⚠️ partials → final → Stop → Done with the capture API faked (the WAV fed through the app's own chunk → WebSocket → Core path). Headless Chrome cannot open an audio device, so real `getUserMedia` capture is still unverified |
 | Web Silent Reconnect | sherpa-onnx | ✅ socket dropped mid-session: attempt 1 → 2 → Ready, transcription resumes; three refused attempts → `RECONNECT_FAILED` |
 | Batch panel | Auto (2 files) | ✅ both done; JSON, TXT and per-file SRT export |
@@ -211,16 +211,22 @@ What the 2026-11-17 web run found:
 - A file sent faster than real time loses every utterance but the last on the batch path —
   reproduced with the CLI, so it is Core's. Tracked in the roadmap.
 
-What the 2026-11-24 run covered, after every component was imported into this repository
+What the 2026-11-24 runs covered, after every component was imported into this repository
 ([ADR 0015](../decisions/0015-monorepo.md)):
 
 - Native processes started by hand from this tree on spare ports, with the configs
   switched from UDS to TCP: Core + dummy VAD + dummy STT, then Core + Silero VAD +
   sherpa-onnx (`torch` 2.10.0, `sherpa-onnx` 1.12.39). `scripts/smoke.sh` against the
-  second stack: 5 passed, and the sherpa-onnx text is identical to the Docker rows above.
-- The Docker images were **not** rebuilt from this tree and the web rows were not re-run;
-  see the roadmap.
-- Core kept running after SIGTERM in both runs. Tracked in the roadmap.
+  second stack: 5 passed. Core kept running after SIGTERM in both runs.
+- All six Compose images rebuilt from this tree and the running stack replaced.
+  `scripts/smoke.sh`: 8 passed. Web: file upload on each engine and on Auto, Stop
+  mid-session, and a two-file Batch with JSON, TXT and SRT downloads.
+- After the containers were recreated, host port 8000 (the web API) was no longer
+  reachable: `scripts/remote-access.sh` had Tailscale listening on the same port. The web
+  rows above were run through a second `client-web-api` container published on 8001, with
+  the page's WebSocket URL (Advanced) pointed at it. After the recovery in
+  [../operations/deployment.md](../operations/deployment.md#remote-access-tailscale), one
+  sherpa-onnx upload through the default `ws://127.0.0.1:8000` also passed.
 
 Open Core/CLI issues surfaced by E2E are tracked in
 [../plans/roadmap.md](../plans/roadmap.md#findings-from-end-to-end-testing).

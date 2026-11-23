@@ -15,8 +15,7 @@ Every component was imported into this repository on 2026-11-24
 
 | Item | Where | Detail |
 |------|-------|--------|
-| Docker images predate the import | root | The `speechmux` Compose stack on the development machine still runs images built from the old checkouts in May and September 2026. Rebuild every image from this tree (`make docker-build`) and re-run the [`e2e-test`](../../.codex/skills/e2e-test/SKILL.md) skill including its web steps. Not done on 2026-11-24 because the host had 9 GiB free and the `vad-silero` image alone is 9.4 GB |
-| Web port binding differs from the running stack | root | The running `client-web-front` container publishes `127.0.0.1:3020`, from an uncommitted edit in an old checkout; `docker-compose.yml` here publishes `3020` on every interface. Decide which is intended before the rebuild |
+| Web API port and Tailscale WebSocket port are both 8000 | root | `docker-compose.yml` publishes `client-web-api` on `API_PORT` (8000) and `scripts/remote-access.sh` makes Tailscale listen on `WS_PORT` (8000). Whichever binds second loses: on 2026-11-24, recreating the containers while remote access was on left the API port unpublished (OrbStack logged `bind: address already in use`; `docker ps` still showed the mapping) and the local web client could not connect. Give the two different ports, or make the script fail loudly |
 | `proto` and the host frameworks are not published | `proto`, `plugin-vad`, `plugin-stt` | No tags, no registry. Third-party engines and the hybrid split in ADR 0015 both wait on this. `.github/workflows/proto.yaml` still triggers its package build on `v*.*.*`, which is now a repository-wide tag pattern — switch to a prefixed tag (`proto/v*`) when publishing starts |
 
 ## Functional gaps in shipped features
