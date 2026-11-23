@@ -2,8 +2,8 @@
 
 **Status: steps 0–6 are done on the `monorepo` branch: all ten components are imported
 with history, the documentation describes one repository, and the tree is verified. What
-is left needs the owner's go-ahead: pushing and merging (step 7), archiving the old
-repositories (step 8). Not pushed.**
+is left needs the owner's go-ahead: merging to `main` (step 7), archiving the old
+repositories (step 8). The branch is pushed to `origin`.**
 
 This is the hand-off for moving every SpeechMux component into this repository
 (`speechmux/speechmux`). It is self-contained: an agent or developer who has not seen the
@@ -243,7 +243,7 @@ nothing new failed.
 
 ### 7. Publish — owner approval required
 
-- [ ] Push `monorepo` to `origin`.
+- [x] Push `monorepo` to `origin`. Pushed 2026-11-24; `origin/main` was still at `5dbe46c`.
 - [ ] Merge into `main` **with a merge commit or a fast-forward**
       (`git switch main && git merge --ff-only monorepo && git push`). Never "Squash and
       merge" or "Rebase and merge": both destroy the imported history.
