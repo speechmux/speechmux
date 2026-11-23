@@ -188,7 +188,7 @@ Core — see [../api/client-protocol.md](../api/client-protocol.md#http-admin-ap
 Four places change. The [`add-engine-plugin`](../../.codex/skills/add-engine-plugin/SKILL.md)
 skill walks through them:
 
-1. A new `plugin-{stt,vad}-<impl>` repo implementing the Protocol and declaring its entry
+1. A new `plugin-{stt,vad}-<impl>` directory implementing the Protocol and declaring its entry
    point. Its `AGENTS.md` is a verbatim copy of `plugin-{stt,vad}/templates/AGENTS.md`;
    engine-specific rules go in `ENGINE.md`, started from `templates/ENGINE.md`.
 2. An `engine.<name>:` section in the host plugin's `config/*.yaml` with a socket/address

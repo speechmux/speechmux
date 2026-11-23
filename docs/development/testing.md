@@ -4,7 +4,7 @@
 
 ## Strategy
 
-Each repository tests itself. There is no cross-repo test harness; correctness at the
+Each component tests itself. There is no cross-component test harness; correctness at the
 boundaries is enforced by the proto contract, `buf breaking`, and the error-code contract
 test.
 
@@ -24,14 +24,14 @@ has no ML dependencies.
 
 **Engine tests never load a model.** Each mocks its backend before importing the engine:
 
-| Repo | Mocking approach |
+| Engine | Mocking approach |
 |------|------------------|
 | `plugin-stt-sherpa-onnx` | `conftest.py` fixture injects `sys.modules["sherpa_onnx"] = MagicMock()` and purges cached plugin modules before and after each test |
 | `plugin-stt-mlx-whisper` | `sys.modules` injection for `mlx_whisper` |
 | `plugin-stt-faster-whisper` | `sys.modules` injection for `faster_whisper` |
 | `plugin-vad-silero` | `unittest.mock.patch` over the torch/silero calls — but the test module still does a real `import torch` |
 
-Follow the pattern already in the repo you are working in.
+Follow the pattern already in the component you are working in.
 
 ---
 
@@ -87,7 +87,7 @@ the module that imports `sherpa_onnx`.
 
 `tests/test_stream.py` (9 tests) passes on its own.
 
-Because `make test` iterates every cloned `plugin-*`, this hang blocks the whole target.
+Because `make test` iterates every `plugin-*`, this hang blocks the whole target.
 
 ### `client-web/api` has no tests
 
@@ -116,7 +116,7 @@ does not. `plugin-stt` typechecks cleanly.
 
 ### `ruff check src/` — 5 findings in each plugin framework
 
-Both repos pin `ruff>=0.4` with no upper bound, and ruff 0.16.5 enables rules that did not
+Both packages pin `ruff>=0.4` with no upper bound, and ruff 0.16.5 enables rules that did not
 exist when the code was written: `UP037` (quotes in annotations), `I001` (import sorting),
 `RUF012` (mutable class-attribute default). Cosmetic, but `make lint` is not green.
 
@@ -150,7 +150,7 @@ Tracked in [../plans/roadmap.md](../plans/roadmap.md) and
 
 ## Writing tests
 
-- Put the test in the repo that owns the code.
+- Put the test in the component that owns the code.
 - Go: table-driven, `t.Run` subtests, `t.Cleanup` for teardown. Use `-race` for anything
   touching the pipeline. `core/internal/session/testutil.go` and `export_test.go` expose
   the helpers you need for session construction.

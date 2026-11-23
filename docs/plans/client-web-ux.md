@@ -1,7 +1,7 @@
 # client-web UX follow-ups
 
 Status: open items only. The UI review's fixes have shipped in `client-web`; what the page
-does now is described in that repo's `README.md`.
+does now is described in `client-web/README.md`.
 
 | Item | Where | Notes |
 |------|-------|-------|

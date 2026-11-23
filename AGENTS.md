@@ -1,4 +1,4 @@
-# AGENTS.md — SpeechMux workspace
+# AGENTS.md — SpeechMux
 
 Working instructions for AI agents in this repository. Read this first, then follow the
 links below for the area you are changing.
@@ -26,20 +26,15 @@ Details: [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ---
 
-## 2. This repository is a workspace, not the code
+## 2. Repository layout
 
-This repo contains **only** the workspace glue: `Makefile`, `workspace.yaml`,
-`docker-compose.yml`, `deploy/`, `scripts/`, `README.md`, `docs/`.
-
-Every component lives in its own GitHub repository under `github.com/speechmux/` and is
-cloned into this directory by `make clone-*`. All of those directories are **gitignored
-here** — a change you make inside them is a change to *that* repo and must be committed
-there, not here.
+One repository holds every first-party component, plus the glue that ties them together
+(`Makefile`, `workspace.yaml`, `docker-compose.yml`, `deploy/`, `scripts/`, `docs/`).
 
 ```
-speechmux/                     ← this repo (workspace)
-├── proto/                     ← github.com/speechmux/proto
-├── core/                      ← github.com/speechmux/core
+speechmux/
+├── proto/                     ← .proto files + generated Go and Python code
+├── core/                      ← Go Core server and `ctl` supervisor
 ├── plugin-vad/                ← VAD plugin host framework
 ├── plugin-vad-silero/         ← Silero VAD engine
 ├── plugin-stt/                ← STT plugin host framework
@@ -50,14 +45,23 @@ speechmux/                     ← this repo (workspace)
 └── client-cli/                ← Python CLI client
 ```
 
-**Before you start:** if the directory you need is missing, clone it
-(`make clone-base`, `make clone-stt IMPL=<engine>`, `make clone-vad IMPL=<engine>`,
-`make clone-web`, `make clone-cli`) rather than assuming the code does not exist.
+Each component keeps its own build definition (`go.mod`, `pyproject.toml`,
+`package.json`), its own `Makefile` and its own tests. They were separate repositories
+until [ADR 0015](docs/decisions/0015-monorepo.md) and were imported with their history, so
+`git log -- core/` reaches back past the import. Go module paths are still
+`github.com/speechmux/core` and `github.com/speechmux/proto`.
 
-Every component repo that has an `AGENTS.md` also has a one-line `CLAUDE.md` containing
+**Keep the components separable.** A later split depends on three invariants:
+
+1. Every engine keeps its own directory and its own `pyproject.toml`.
+2. An engine uses only its host framework's public API — no imports of framework
+   internals, no relative paths into a sibling directory.
+3. Core and the host frameworks contain no engine-specific code.
+
+Every component that has an `AGENTS.md` also has a one-line `CLAUDE.md` containing
 `@AGENTS.md`, so Claude Code imports the same rules. `core/` has its own `AGENTS.md` with Core-specific invariants, test
 conventions and the package map. Each `plugin-*` directory has one too. The two host frameworks (`plugin-vad`,
-`plugin-stt`) have hand-written ones. Every **engine** repo (`plugin-vad-*`, `plugin-stt-*`)
+`plugin-stt`) have hand-written ones. Every **engine** directory (`plugin-vad-*`, `plugin-stt-*`)
 carries a byte-identical `AGENTS.md` copied from `plugin-{vad,stt}/templates/AGENTS.md`,
 and puts everything engine-specific in `ENGINE.md` beside it. Read the root file, then the
 plugin's `AGENTS.md`, then `ENGINE.md` when working there.
@@ -85,7 +89,7 @@ plugin's `AGENTS.md`, then `ENGINE.md` when working there.
 
 ## 4. Commands
 
-Run everything from the workspace root unless stated otherwise. All commands below are
+Run everything from the repository root unless stated otherwise. All commands below are
 verified against the current tree; see
 [docs/development/workspace.md](docs/development/workspace.md) for their exact status
 and prerequisites.
@@ -93,10 +97,7 @@ and prerequisites.
 ### Setup
 
 ```bash
-make clone-base                    # proto, core, plugin-vad, plugin-stt
-make clone-stt IMPL=sherpa-onnx    # add an STT engine repo
-make clone-vad IMPL=silero         # add a VAD engine repo
-make setup                         # .venv (Python 3.13) + editable installs of every cloned repo
+make setup                         # .venv (Python 3.13) + editable installs of every plugin and client
 ```
 
 `make setup` installs the real ML runtimes (torch, mlx-whisper, faster-whisper,
@@ -120,7 +121,7 @@ cd client-web/web && npm ci
 ### Test
 
 ```bash
-make test                                   # Go tests + pytest for every cloned plugin and client-cli
+make test                                   # Go tests + pytest for every plugin and client-cli
 cd core && go test ./...                    # Go only (add -race for the full check)
 cd <plugin-dir> && ../.venv/bin/python3 -m pytest tests/ -q
 cd client-web/web && npm test               # Vitest unit tests for lib/ (not part of `make test`)
@@ -167,13 +168,14 @@ Select engines with `PROFILES` (native) or `DOCKER_PROFILE` (Docker) — see
 
 1. **The code is the source of truth.** When a document and the code disagree, the code
    wins — then fix the document in the same change.
-2. **Stay inside the repository you are changing.** A Core change and a plugin change are
-   two commits in two repos. Never edit generated code to work around a proto change.
-3. **Cross-repo changes go proto-first**: edit `.proto` → regenerate → update Go Core →
+2. **Stay inside the component you are changing.** A change that genuinely spans components
+   is one commit, not one per component. Never edit generated code to work around a proto
+   change.
+3. **Cross-component changes go proto-first**: edit `.proto` → regenerate → update Go Core →
    update Python plugins → update clients. See the `change-proto` skill.
 4. **Proto changes are additive only.** New fields, new RPCs, new enum values. Removing or
    renumbering a field, or changing a type, is forbidden; `reserved` the number and the
-   name instead. Enforced by `buf breaking` in the proto repo's CI.
+   name instead. Enforced by `buf breaking` in CI (`.github/workflows/proto.yaml`).
 5. **`ERR####` codes are permanent.** Never change the meaning of an assigned code and
    never reuse a retired number.
 6. **Match the surrounding style.** Go: `slog` structured logging, doc comments on every
@@ -189,11 +191,11 @@ Select engines with `PROFILES` (native) or `DOCKER_PROFILE` (Docker) — see
 
 ## 6. Testing rules
 
-- New behaviour needs a test in the repo that owns it. Go code goes in `_test.go` beside
-  the source; Python goes in that repo's `tests/`.
+- New behaviour needs a test in the component that owns it. Go code goes in `_test.go` beside
+  the source; Python goes in that component's `tests/`.
 - **Plugin tests must never require a real model or ML runtime.** Every engine test mocks
   its backend (`sys.modules["sherpa_onnx"] = MagicMock()`, `patch("torch...")`, …) so the
-  suite runs on any machine. Follow the existing pattern in the repo you are in.
+  suite runs on any machine. Follow the existing pattern in the component you are in.
 - When mocking a recognizer/model, set every attribute the production code reads in a
   loop condition. A bare `MagicMock()` is truthy, and `while recognizer.is_ready(stream)`
   against a bare mock hangs forever — this is exactly the live bug described in
@@ -201,7 +203,7 @@ Select engines with `PROFILES` (native) or `DOCKER_PROFILE` (Docker) — see
 - Core integration tests use in-process Go stubs for the plugins
   (`core/internal/transport/pipeline_integration_test.go`,
   `core/internal/stream/*_integration_test.go`), never live Python processes.
-- Run the affected repo's suite before finishing. State plainly what you ran and what
+- Run the affected component's suite before finishing. State plainly what you ran and what
   failed.
 
 ---
@@ -221,7 +223,7 @@ Any change to a `.proto` file, the WebSocket JSON schema, the HTTP admin routes,
 | `errors/codes.go` | [docs/api/error-codes.md](docs/api/error-codes.md) |
 | A YAML key anywhere | [docs/operations/configuration.md](docs/operations/configuration.md) **and** the inline comment in every copy of that file |
 
-`proto/README.md` also documents the wire contract from the proto repo's own point of
+`proto/README.md` also documents the wire contract from `proto`'s own point of
 view; keep the two consistent, and prefer linking over duplicating.
 
 ---
@@ -286,15 +288,15 @@ Rules:
 3. Engine identity reaching Core comes from `GetCapabilities` at runtime, not from
    `plugins.yaml`. Advertise `streaming_mode` and `endpointing_capability` honestly;
    Core's routing and endpointing validation depend on them.
-4. A new engine touches four places: the engine repo, the engine section in the plugin's
+4. A new engine touches four places: the engine directory, the engine section in the plugin's
    `config/*.yaml`, an endpoint in `core/config/plugins.yaml` (and
    `deploy/docker/plugins-docker.yaml`), and a `workspace.yaml` profile. The
    `add-engine-plugin` skill walks all of them.
-5. Engine repos all share one `AGENTS.md`, owned by the host framework at
-   `plugin-{vad,stt}/templates/AGENTS.md`. Never edit the copy in an engine repo — change
-   the template and re-copy it everywhere. Engine-specific rules go in that repo's
+5. Engines all share one `AGENTS.md`, owned by the host framework at
+   `plugin-{vad,stt}/templates/AGENTS.md`. Never edit the copy in an engine directory —
+   change the template and re-copy it everywhere. Engine-specific rules go in that engine's
    `ENGINE.md`.
-6. Follow the plugin's own `AGENTS.md` and `ENGINE.md` for repo-specific rules.
+6. Follow the plugin's own `AGENTS.md` and `ENGINE.md` for plugin-specific rules.
 
 Background: [docs/architecture/plugin-system.md](docs/architecture/plugin-system.md).
 

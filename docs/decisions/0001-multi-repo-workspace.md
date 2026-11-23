@@ -1,6 +1,6 @@
 # 0001 — One repository per component, tied together by a workspace repo
 
-Status: Accepted
+Status: Superseded by 0015
 
 ## Context
 

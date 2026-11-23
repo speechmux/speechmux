@@ -20,48 +20,11 @@ DOCKER_PROFILE ?= sherpa faster-whisper
 # Expands to: --profile sherpa --profile faster-whisper (evaluated lazily so overrides work).
 _DOCKER_PROFILE_FLAGS = $(foreach p,$(DOCKER_PROFILE),--profile $(p))
 
-.PHONY: clone-base clone-stt clone-vad clone-web clone-cli \
-        setup proto build \
+.PHONY: setup proto build \
         up down status logs \
         test \
         docker-build docker-up docker-down docker-logs docker-logs-stt docker-logs-vad \
         download-models clean
-
-# ── Clone ─────────────────────────────────────────────────────────────────────
-
-define _clone
-	@if [ ! -d $(1) ]; then \
-		git clone git@github.com:speechmux/$(1).git; \
-	else \
-		echo "$(1): already exists, skipping"; \
-	fi
-endef
-
-clone-base:
-	$(call _clone,proto)
-	$(call _clone,core)
-	$(call _clone,plugin-vad)
-	$(call _clone,plugin-stt)
-
-# Usage: make clone-stt IMPL=faster-whisper
-clone-stt:
-ifndef IMPL
-	$(error Usage: make clone-stt IMPL=<engine>  e.g. faster-whisper)
-endif
-	$(call _clone,plugin-stt-$(IMPL))
-
-# Usage: make clone-vad IMPL=silero
-clone-vad:
-ifndef IMPL
-	$(error Usage: make clone-vad IMPL=<engine>  e.g. silero)
-endif
-	$(call _clone,plugin-vad-$(IMPL))
-
-clone-web:
-	$(call _clone,client-web)
-
-clone-cli:
-	$(call _clone,client-cli)
 
 # ── Setup / Build ─────────────────────────────────────────────────────────────
 
