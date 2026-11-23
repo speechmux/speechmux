@@ -1,0 +1,56 @@
+# STT Inference Plugin configuration
+
+server:
+  socket: /tmp/speechmux/stt-sherpa.sock  # UDS path this plugin process listens on. Must match plugins.yaml endpoint socket.
+  engine: sherpa_onnx_zipformer           # Engine to load (entry-point name from speechmux.stt_engine group).
+  log_level: INFO                       # Logging verbosity: DEBUG | INFO | WARNING | ERROR.
+  max_concurrent_sessions: 10           # Max concurrent streaming sessions. Set to available GPU/CPU threads.
+  log_transcription_text: true          # Include recognized text in log output. Set to false to redact
+                                        # text from logs (shows character count instead) for privacy compliance.
+
+engine:
+  mlx_whisper:                                              # mlx-whisper engine settings (engine: mlx_whisper, Apple Silicon).
+    model: mlx-community/whisper-large-v3-turbo             # Hugging Face model ID or local path to MLX Whisper checkpoint.
+    compute_type: float16                                   # Precision: float16 (default, uses Metal fp16) | float32 (fallback).
+    language: null                                          # BCP-47 language code (e.g. "ko"). null = auto-detect per request.
+    beam_size: 5                                            # Beam search width. Higher = more accurate but slower.
+
+  faster_whisper:                                           # faster-whisper engine settings (engine: faster_whisper, CPU/CUDA).
+    model: large-v3                                         # Model size (tiny|base|small|medium|large-v3) or HuggingFace ID.
+    device: auto                                            # Compute device: auto | cpu | cuda. auto selects CUDA if available.
+    compute_type: float16                                   # Quantisation: float16 | int8_float16 | int8. Use int8 on CPU.
+    language: null                                          # BCP-47 language code. null = auto-detect per request.
+    beam_size: 5                                            # Beam search width. Higher = more accurate but slower.
+
+  torch_whisper:                                            # torch-whisper engine settings (engine: torch_whisper, CPU/MPS).
+    model: large-v3                                         # Whisper model size: tiny | base | small | medium | large-v3.
+    device: auto                                            # Compute device: auto | cpu | cuda | mps. auto selects best available.
+    compute_type: float32                                   # Precision: float32 (safe default) | float16 (GPU only, not MPS).
+    language: null                                          # BCP-47 language code. null = auto-detect per request.
+    beam_size: 5                                            # Beam search width. Higher = more accurate but slower.
+
+  dummy:                    # Dummy engine settings (engine: dummy). No model weights required.
+    latency_ms: 50          # Artificial inference delay (ms). Simulates GPU latency for load testing.
+    text: "hello world"     # Fixed transcript returned for every non-silent audio chunk.
+
+  sherpa_onnx_zipformer:    # sherpa-onnx Zipformer streaming engine (ko/en/ja; STREAMING_MODE_NATIVE).
+    recognizer:
+      num_threads: 2        # ONNX Runtime intra-op threads per recognizer instance. Increase on many-core hosts.
+      sample_rate: 16000    # Hz; must match Core codec.target_sample_rate.
+      feature_dim: 80       # Mel-filterbank bins; must match model training config (80 for most Zipformer).
+
+    endpoint_detection:
+      rule1_min_trailing_silence: 2.4   # sec; silence after any speech (conservative, no min utterance length).
+      rule2_min_trailing_silence: 1.2   # sec; silence after ≥1.0 s of confirmed speech (responsive).
+      rule3_min_utterance_length: 20.0  # sec; force-finalize regardless of silence (guards against stuck sessions).
+
+    models:
+      default_language: ko  # BCP-47 fallback when session language_code is absent or unsupported.
+      languages:
+        ko:
+          encoder: plugin-stt-sherpa-onnx/models/ko-streaming/encoder-epoch-99-avg-1.int8.onnx  # Relative to workspace root.
+          decoder: plugin-stt-sherpa-onnx/models/ko-streaming/decoder-epoch-99-avg-1.int8.onnx
+          joiner:  plugin-stt-sherpa-onnx/models/ko-streaming/joiner-epoch-99-avg-1.int8.onnx
+          tokens:  plugin-stt-sherpa-onnx/models/ko-streaming/tokens.txt
+        # en/ja: Zipformer2-streaming models not yet downloaded. Add entries once
+        #        sherpa-onnx streaming checkpoints are available for those languages.
