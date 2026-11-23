@@ -124,7 +124,7 @@ Run on the current tree; see [testing.md](testing.md) for details and the failur
 | `cd plugin-stt-mlx-whisper && pytest tests/` | ✅ 10 passed |
 | `cd plugin-stt-faster-whisper && pytest tests/` | ✅ 15 passed |
 | `cd plugin-stt-sherpa-onnx && pytest tests/` | ❌ 4 fail, then the suite **hangs** |
-| `cd plugin-vad-silero && pytest tests/` | ⏭️ not run — needs a real `torch` install |
+| `cd plugin-vad-silero && pytest tests/` | ✅ 16 passed with `torch` 2.10.0 installed; fails at import without it |
 | `cd client-cli && pytest tests/` | ✅ 29 passed |
 | `cd client-web/web && npm test` | ✅ Vitest, all passing |
 | `cd client-web/web && npx tsc --noEmit` | ✅ clean |

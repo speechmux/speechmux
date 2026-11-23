@@ -211,5 +211,16 @@ What the 2026-11-17 web run found:
 - A file sent faster than real time loses every utterance but the last on the batch path —
   reproduced with the CLI, so it is Core's. Tracked in the roadmap.
 
+What the 2026-11-24 run covered, after every component was imported into this repository
+([ADR 0015](../decisions/0015-monorepo.md)):
+
+- Native processes started by hand from this tree on spare ports, with the configs
+  switched from UDS to TCP: Core + dummy VAD + dummy STT, then Core + Silero VAD +
+  sherpa-onnx (`torch` 2.10.0, `sherpa-onnx` 1.12.39). `scripts/smoke.sh` against the
+  second stack: 5 passed, and the sherpa-onnx text is identical to the Docker rows above.
+- The Docker images were **not** rebuilt from this tree and the web rows were not re-run;
+  see the roadmap.
+- Core kept running after SIGTERM in both runs. Tracked in the roadmap.
+
 Open Core/CLI issues surfaced by E2E are tracked in
 [../plans/roadmap.md](../plans/roadmap.md#findings-from-end-to-end-testing).
