@@ -148,7 +148,7 @@ Simpler — there is no Go struct.
    `config.get("key", default)` so an older config file still starts.
 3. Mirror it into `deploy/docker/<plugin>-docker.yaml`.
 4. Add a test that `from_config` picks it up and that the default applies when absent.
-5. Document it in the engine repo's `README.md` and, if it is framework-level, in
+5. Document it in the engine's `README.md` and, if it is framework-level, in
    [docs/operations/configuration.md](../../../docs/operations/configuration.md).
 
 ---

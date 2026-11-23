@@ -41,7 +41,7 @@ covers the process layout, the two decode paths, and where each Core package sit
 
 | Document | Covers |
 |----------|--------|
-| [development/workspace.md](development/workspace.md) | Repo layout, toolchain, setup, build, verified command status, cross-repo changes, conventions |
+| [development/workspace.md](development/workspace.md) | Repository layout, toolchain, setup, build, verified command status, cross-component changes, conventions |
 | [development/testing.md](development/testing.md) | Test strategy per layer, how to run each suite, known failures, how to write tests here |
 
 ## Decisions (ADR)
@@ -51,7 +51,7 @@ this like this?" later; do not write one for a routine fix.
 
 | ADR | Title |
 |-----|-------|
-| [0001](decisions/0001-multi-repo-workspace.md) | One repository per component, tied together by a workspace repo |
+| [0001](decisions/0001-multi-repo-workspace.md) | One repository per component, tied together by a workspace repo — superseded by 0015 |
 | [0002](decisions/0002-single-bidi-streaming-rpc.md) | One bidirectional RPC carries the whole session |
 | [0003](decisions/0003-entry-point-engine-registry.md) | Engines register through Python entry points, behind a host framework |
 | [0004](decisions/0004-per-session-vad-stream.md) | One `StreamVAD` stream per session, not a multiplexed one |
@@ -65,6 +65,7 @@ this like this?" later; do not write one for a routine fix.
 | [0012](decisions/0012-docker-compose-profiles.md) | Docker Compose with profiles for engine selection |
 | [0013](decisions/0013-separate-streaming-and-batch-pools.md) | Streaming and batch are one `DecodeEngine` interface with separate capacity pools |
 | [0014](decisions/0014-endpointing-source.md) | `endpointing_source` is a field on `StreamStartConfig` |
+| [0015](decisions/0015-monorepo.md) | One repository for every first-party component |
 
 ## Plans
 
@@ -73,7 +74,7 @@ Work that is **not yet built**. A plan is deleted when it ships.
 | Document | Covers |
 |----------|--------|
 | [plans/roadmap.md](plans/roadmap.md) | Everything outstanding, plus what is deliberately unimplemented |
-| [plans/monorepo-migration.md](plans/monorepo-migration.md) | Hand-off for importing every component repository into this one, step by step |
+| [plans/monorepo-migration.md](plans/monorepo-migration.md) | Hand-off for the move to one repository: imported and documented, publishing steps still open |
 | [plans/decode-options-and-task-passthrough.md](plans/decode-options-and-task-passthrough.md) | `decode_profile` and `task` never reach the STT plugin |
 | [plans/vad-frame-size-negotiation.md](plans/vad-frame-size-negotiation.md) | Core ignores the VAD plugin's `optimal_frame_ms` |
 | [plans/test-and-lint-gaps.md](plans/test-and-lint-gaps.md) | Nine verified test and tooling gaps, including a suite that hangs |
@@ -95,16 +96,16 @@ symlink to that directory, so there is exactly one copy of each skill.
 | [verify-workspace](../.codex/skills/verify-workspace/SKILL.md) | Running the full build/test/lint sweep |
 | [e2e-test](../.codex/skills/e2e-test/SKILL.md) | Real audio through CLI and web against a running stack |
 
-## Per-repository instructions
+## Per-component instructions
 
-Each component repository carries an `AGENTS.md` that assumes the root
+`core/` and each `plugin-*` directory carry an `AGENTS.md` that assumes the root
 [../AGENTS.md](../AGENTS.md) and adds only what is specific to it, plus a
 one-line `CLAUDE.md` containing `@AGENTS.md` so Claude Code imports the same file.
 
-| Repo kind | `AGENTS.md` | Engine-specific rules |
+| Component | `AGENTS.md` | Engine-specific rules |
 |-----------|-------------|-----------------------|
 | Core (`core/`) | Hand-written: package map, pipeline invariants, Go test conventions | — |
-| Host frameworks (`plugin-vad/`, `plugin-stt/`) | Hand-written per repo | — |
+| Host frameworks (`plugin-vad/`, `plugin-stt/`) | Hand-written, one each | — |
 | Engine adapters (`plugin-vad-*/`, `plugin-stt-*/`) | **Byte-identical copy** of `plugin-{vad,stt}/templates/AGENTS.md` | `ENGINE.md` beside it |
 
 A new engine author copies `templates/AGENTS.md` verbatim and fills in `templates/ENGINE.md`.

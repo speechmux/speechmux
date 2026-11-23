@@ -12,7 +12,7 @@ an RPC, an enum value, or a message.
 
 ## Prerequisites
 
-- `proto` and `core` cloned; `.venv` with `grpcio-tools` installed.
+- `.venv` with `grpcio-tools` installed.
 - `protoc` plus `protoc-gen-go` and `protoc-gen-go-grpc` on `$GOBIN` (`~/go/bin`).
 - `buf` installed (`brew install bufbuild/buf/buf`).
 - Read [docs/api/plugin-protocol.md](../../../docs/api/plugin-protocol.md#compatibility-rules).
@@ -29,7 +29,7 @@ reserved "old_field_name";
 ```
 
 A genuinely breaking change requires a new version package (`client/v2/`). `buf breaking`
-in the proto repo's CI enforces this against `main`.
+in CI (`.github/workflows/proto.yaml`) enforces this against `main`.
 
 ---
 
@@ -63,7 +63,7 @@ cd proto && make generate           # Go + Python
 uv pip install --python ../.venv/bin/python3 -e gen/python
 ```
 
-Or, from the workspace root, `make proto` does both.
+Or, from the repository root, `make proto` does both.
 
 `make generate-python` also runs `_fix-python-imports`, which rewrites the bare
 `from common.v1 import …` that `grpcio-tools` emits into `from stt_proto.common.v1 import …`,
@@ -76,13 +76,13 @@ package metadata changes.
 
 ### 4. Check the diff
 
-`git -C proto diff --stat gen/` should show only files your change touches. A different
+`git diff --stat proto/gen/` should show only files your change touches. A different
 `protoc` or `grpcio-tools` version rewrites serialized descriptors and version strings
 across every generated file. If you see churn unrelated to your change:
 
 ```bash
-git -C proto checkout -- gen/          # discard everything
-# then regenerate with the versions the repo was last generated with,
+git checkout -- proto/gen/             # discard everything
+# then regenerate with the versions the code was last generated with,
 # or accept the churn as a deliberate, separate commit
 ```
 
@@ -91,10 +91,9 @@ Do not mix a toolchain upgrade into a feature commit.
 ### 5. Update Go Core
 
 `core/go.mod` carries a **committed** `replace github.com/speechmux/proto => ../proto`, so
-Core compiles against the sibling `proto/` checkout directly. Your regenerated
+Core compiles against the sibling `proto/` directory directly. Your regenerated
 `proto/gen/go` is visible to Core as soon as `make generate` finishes — no tag, no `go.mod`
-edit. The flip side: `core` and `proto` have no version pin between them, so commit the
-proto change first and note the proto commit in the Core commit message.
+edit.
 
 Then:
 
@@ -146,7 +145,7 @@ Mandatory, in the same change:
 | `vad/v1`, `inference/v1` | [docs/api/plugin-protocol.md](../../../docs/api/plugin-protocol.md) |
 | `common/v1` enums | [docs/api/plugin-protocol.md](../../../docs/api/plugin-protocol.md) and [docs/api/error-codes.md](../../../docs/api/error-codes.md) |
 
-Also `proto/README.md`, which documents the contract from the proto repo's own point of
+Also `proto/README.md`, which documents the contract from `proto`'s own point of
 view.
 
 ---
@@ -155,7 +154,7 @@ view.
 
 ```bash
 cd proto && buf lint && make generate
-cd proto && buf breaking --against '.git#branch=main'   # what CI runs on PRs
+cd proto && buf breaking --against '../.git#branch=main,subdir=proto'   # what CI runs on PRs
 cd core  && go build ./... && go test ./...
 cd plugin-stt && ../.venv/bin/python3 -m pytest tests/ -q
 cd plugin-vad && ../.venv/bin/python3 -m pytest tests/ -q
@@ -182,19 +181,19 @@ Then end to end: `make up` and a real transcription through both the CLI and the
   change does not propagate to it automatically.
 - **Forgetting that Core builds against `../proto` directly.** The committed `replace` in
   `core/go.mod` means an un-regenerated or half-edited `proto/gen/go` breaks the Core build
-  immediately, and a Core commit can silently depend on an uncommitted proto change. Commit
-  proto first.
-- **Changing an engine `Protocol` without updating every adapter.** They live in separate
-  repos and will not fail your build — they fail at runtime.
+  immediately. Regenerate before touching Core, and commit the `.proto`, the generated code
+  and the Core change together.
+- **Changing an engine `Protocol` without updating every adapter.** They are separate
+  packages and will not fail your build — they fail at runtime.
 
 ---
 
 ## Done when
 
-- [ ] `buf lint` and `buf breaking --against '.git#branch=main'` both pass.
+- [ ] `buf lint` and `buf breaking --against '../.git#branch=main,subdir=proto'` both pass.
 - [ ] `make generate` produces a diff limited to your change.
 - [ ] `speechmux-proto` reinstalled into `.venv`.
 - [ ] Core builds and all Go tests pass.
 - [ ] All plugin and client test suites pass.
 - [ ] The matching API document is updated, along with `proto/README.md`.
-- [ ] Committed per repository, proto first.
+- [ ] Committed as one change: `.proto`, generated code, Core, plugins, clients and docs.

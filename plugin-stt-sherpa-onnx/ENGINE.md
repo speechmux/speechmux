@@ -26,7 +26,7 @@ It is also the engine Core's whole `endpointing_source` mechanism exists to coor
 
 ## Layout
 
-Unlike the Whisper engines this repo has three source modules:
+Unlike the Whisper engines this package has three source modules:
 
 | Module | Contains |
 |--------|----------|
@@ -114,7 +114,7 @@ session (weights are large) and do not mutate the dict after startup.
 - Calling `is_endpoint()` in `CORE` mode → duplicated finals.
 - Dropping `input_finished()` → truncated finals.
 - Forgetting `reset()` after an `ENGINE`-mode final → a final per silent frame.
-- This repo intentionally has **no `main.py` and no `config/`**; it reuses `plugin-stt`'s.
+- This package intentionally has **no `main.py` and no `config/`**; it reuses `plugin-stt`'s.
 
 ## Test suite status
 
@@ -132,7 +132,7 @@ session (weights are large) and do not mutate the dict after startup.
 
 Run `pytest tests/test_stream.py -q` (9 passing) meanwhile. Because the workspace
 `make test` iterates every plugin, this hang blocks it for the whole workspace — fixing it is
-the highest-value change in this repo.
+the highest-value change in this package.
 
 `conftest.py`'s `mock_sherpa_onnx` fixture purges cached plugin modules before and after
 each test so the mock wins even with the real package installed. Every engine test must take

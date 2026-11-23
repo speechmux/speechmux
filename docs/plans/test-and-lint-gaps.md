@@ -9,7 +9,7 @@ Every item below was reproduced on the current tree. Details and exact error tex
 
 ## 1. `plugin-stt-sherpa-onnx` test suite hangs — blocks `make test`
 
-**Repo:** `plugin-stt-sherpa-onnx`. **Priority: highest** — it blocks the only
+**Component:** `plugin-stt-sherpa-onnx`. **Priority: highest** — it blocks the only
 whole-workspace test command.
 
 `tests/test_engine.py::test_force_finalize_emits_final` and `test_force_finalize_calls_reset`
@@ -24,7 +24,7 @@ Fix: set `mock_recognizer.is_ready.return_value = False` in both tests. Consider
 
 ## 2. `plugin-stt-sherpa-onnx` — 4 tests require a real `sherpa_onnx`
 
-Same repo. `test_int16_to_float32_range`, `_zero_bytes`, `_shape_preserved`,
+Same component. `test_int16_to_float32_range`, `_zero_bytes`, `_shape_preserved`,
 `_odd_bytes_truncated` import `speechmux_plugin_stt_sherpa_onnx.engine` inside the test body
 without requesting the `mock_sherpa_onnx` fixture, so they fail with `ModuleNotFoundError`
 when the real package is absent — contradicting the conftest's stated premise that
@@ -35,7 +35,7 @@ Fix: take the fixture, or move `_int16_to_float32` into a module that does not i
 
 ## 3. `client-web/api` has no tests
 
-**Repo:** `client-web`. There is no `tests/` directory, so any `pytest tests/` command for
+**Component:** `client-web`. There is no `tests/` directory, so any `pytest tests/` command for
 it fails. Untested: the WebSocket relay in both directions, server-side API-key injection,
 bearer-token and `?token=` auth, per-user session limiting, the heartbeat, and relay-error
 propagation to the browser.
@@ -45,7 +45,7 @@ Add `client-web/api/tests/` with `pytest` + `pytest-asyncio` against FastAPI's
 
 ## 4. `client-web/web` — components untested, `next lint` deprecated
 
-Same repo. Vitest (`npm test`) covers the pure modules under `web/lib/`. Nothing tests the
+Same component. Vitest (`npm test`) covers the pure modules under `web/lib/`. Nothing tests the
 React side: the session state machine in `app/page.tsx` (Start / Stop / Finishing, capture
 errors, reconnect) and the components. Add `@testing-library/react` with a `jsdom`
 environment and cover the state transitions the `e2e-test` skill currently checks by hand.
@@ -55,7 +55,7 @@ ESLint CLI (`npx @next/codemod@canary next-lint-to-eslint-cli .`).
 
 ## 5. `plugin-vad` fails `mypy src/`
 
-**Repo:** `plugin-vad`. One error:
+**Component:** `plugin-vad`. One error:
 
 ```
 service/vad_servicer.py:22: error: Class cannot subclass "VADPluginServicer" (has type "Any")
@@ -67,7 +67,7 @@ service/vad_servicer.py:22: error: Class cannot subclass "VADPluginServicer" (ha
 
 ## 6. `ruff check src/` fails in both plugin frameworks
 
-**Repos:** `plugin-vad`, `plugin-stt`. Five findings each under ruff 0.16.5 — `UP037`
+**Components:** `plugin-vad`, `plugin-stt`. Five findings each under ruff 0.16.5 — `UP037`
 (quoted annotations), `I001` (import order), `RUF012` (mutable class-attribute default).
 Both pin `ruff>=0.4` with no upper bound, so new rules arrive with new releases.
 
@@ -76,7 +76,7 @@ ruff upper bound (or a `[tool.ruff] required-version`) so lint results are repro
 
 ## 7. Go formatting and lint
 
-**Repo:** `core`. `gofmt -l .` reports 29 files, mostly hand-aligned struct-field and
+**Component:** `core`. `gofmt -l .` reports 29 files, mostly hand-aligned struct-field and
 const-block comments. `go vet ./...` is clean. `core/Makefile lint` calls `golangci-lint`,
 which is not installed.
 
@@ -85,14 +85,14 @@ then add a `golangci-lint` config and install instructions so `make lint` is run
 
 ## 8. Untested Core packages
 
-**Repo:** `core`. `internal/tracing`, `internal/metrics` and `internal/health` have no test
+**Component:** `core`. `internal/tracing`, `internal/metrics` and `internal/health` have no test
 files. Worth pinning: the metric names and label sets (a rename silently breaks
 dashboards), the `ok`/`degraded`/`error`/`draining` aggregation rules, and that
 `tracing.Init("")` installs the no-op provider.
 
 ## 9. `core/Makefile loadtest` help text is stale
 
-**Repo:** `core`. It suggests `make -C .. run-dummy`, a workspace target that no longer
+**Component:** `core`. It suggests `make -C .. run-dummy`, a workspace target that no longer
 exists. Update it to name the dummy config files directly
 (`plugin-vad/config/vad-dummy.yaml`, `plugin-stt/config/inference-dummy.yaml`,
 `core/config/plugins-dummy.yaml`).

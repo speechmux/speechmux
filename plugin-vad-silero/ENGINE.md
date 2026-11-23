@@ -64,7 +64,7 @@ change.
 - Changing `optimal_frame_ms` also shifts `plugin-vad`'s logging debounce (3 frames ≈ 96 ms,
   10 frames ≈ 320 ms), which is expressed in frames.
 - `torch` is the heaviest dependency in the workspace — which is exactly why this engine is
-  a separate repo from `plugin-vad`.
+  a separate package from `plugin-vad`.
 
 ## Test suite status
 

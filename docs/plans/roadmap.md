@@ -10,9 +10,10 @@ reasoning to an ADR in [../decisions/](../decisions/) instead.
 
 ## Repository structure
 
-[monorepo-migration.md](monorepo-migration.md) — every component repository is being
-imported into this one, with history, on the `monorepo` branch. In progress: the import
-is done, the documentation and verification steps are not.
+[monorepo-migration.md](monorepo-migration.md) — every component repository has been
+imported into this one, with history, on the `monorepo` branch
+([ADR 0015](../decisions/0015-monorepo.md)). Still open: pushing and merging the branch,
+and archiving the ten old repositories.
 
 ## Functional gaps in shipped features
 
@@ -71,7 +72,7 @@ and `deploy/docker/core-docker.yaml` and fail when they diverge.
   commented out in `plugin-stt/config/inference-onnx.yaml` pending available Zipformer2
   streaming checkpoints. Adding one is config plus a model download, no code.
 - **`torch_whisper`.** `plugin-stt/config/inference-onnx.yaml` carries a `torch_whisper:`
-  engine section, but no `plugin-stt-torch-whisper` repository exists. Either build the
+  engine section, but no `plugin-stt-torch-whisper` directory exists. Either build the
   adapter or remove the dead config section.
 
 ## Deliberately unimplemented

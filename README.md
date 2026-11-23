@@ -97,39 +97,40 @@ flowchart TD
 
 On `ERR3004` (VAD stream failure) or `ERR3005` (buffer overflow), `retryable: true` — the client should open a new stream and replay the last ~2 s of audio to avoid losing the unstable segment.
 
-## Repositories
+## Components
 
-Each component lives in its own repository under the `speechmux` GitHub organization.
+Every component lives in this repository, each in its own directory with its own build
+files and tests.
 
 ### Infrastructure
 
-| Repo | Language | Role |
-|------|----------|------|
-| [`proto`](https://github.com/speechmux/proto) | Protobuf | Proto definitions + generated Go/Python code |
-| [`core`](https://github.com/speechmux/core) | Go | gRPC/WS server, session management, EPD, decode scheduling, routing |
+| Directory | Language | Role |
+|-----------|----------|------|
+| [`proto`](proto/) | Protobuf | Proto definitions + generated Go/Python code |
+| [`core`](core/) | Go | gRPC/WS server, session management, EPD, decode scheduling, routing |
 
 ### VAD Plugins
 
-| Repo | Language | Role |
-|------|----------|------|
-| [`plugin-vad`](https://github.com/speechmux/plugin-vad) | Python | VAD plugin base (servicer, VADEngine Protocol, Dummy engine) |
-| [`plugin-vad-silero`](https://github.com/speechmux/plugin-vad-silero) | Python | Silero VAD engine |
+| Directory | Language | Role |
+|-----------|----------|------|
+| [`plugin-vad`](plugin-vad/) | Python | VAD plugin base (servicer, VADEngine Protocol, Dummy engine) |
+| [`plugin-vad-silero`](plugin-vad-silero/) | Python | Silero VAD engine |
 
 ### STT Plugins
 
-| Repo | Language | Role |
-|------|----------|------|
-| [`plugin-stt`](https://github.com/speechmux/plugin-stt) | Python | STT plugin base (servicer, InferenceEngine + StreamingInferenceEngine Protocols, Dummy engine) |
-| [`plugin-stt-sherpa-onnx`](https://github.com/speechmux/plugin-stt-sherpa-onnx) | Python | sherpa-onnx Zipformer streaming engine (CPU/ARM, any language) |
-| [`plugin-stt-mlx-whisper`](https://github.com/speechmux/plugin-stt-mlx-whisper) | Python | mlx-whisper batch engine (MLX, Apple Silicon) |
-| [`plugin-stt-faster-whisper`](https://github.com/speechmux/plugin-stt-faster-whisper) | Python | faster-whisper batch engine (CTranslate2, CPU/CUDA) |
+| Directory | Language | Role |
+|-----------|----------|------|
+| [`plugin-stt`](plugin-stt/) | Python | STT plugin base (servicer, InferenceEngine + StreamingInferenceEngine Protocols, Dummy engine) |
+| [`plugin-stt-sherpa-onnx`](plugin-stt-sherpa-onnx/) | Python | sherpa-onnx Zipformer streaming engine (CPU/ARM, any language) |
+| [`plugin-stt-mlx-whisper`](plugin-stt-mlx-whisper/) | Python | mlx-whisper batch engine (MLX, Apple Silicon) |
+| [`plugin-stt-faster-whisper`](plugin-stt-faster-whisper/) | Python | faster-whisper batch engine (CTranslate2, CPU/CUDA) |
 
 ### Clients
 
-| Repo | Language | Role |
-|------|----------|------|
-| [`client-web`](https://github.com/speechmux/client-web) | TS/Python | Next.js 15 frontend + FastAPI WebSocket proxy |
-| [`client-cli`](https://github.com/speechmux/client-cli) | Python | CLI client (file, batch, microphone) |
+| Directory | Language | Role |
+|-----------|----------|------|
+| [`client-web`](client-web/) | TS/Python | Next.js 15 frontend + FastAPI WebSocket proxy |
+| [`client-cli`](client-cli/) | Python | CLI client (file, batch, microphone) |
 
 ## Quick Start
 
@@ -146,22 +147,12 @@ Each component lives in its own repository under the `speechmux` GitHub organiza
 ```bash
 git clone git@github.com:speechmux/speechmux.git
 cd speechmux
-
-make clone-base                    # proto, core, plugin-vad, plugin-stt
-
-make clone-vad IMPL=silero         # plugin-vad-silero
-make clone-stt IMPL=sherpa-onnx    # CPU / ARM streaming Zipformer (recommended)
-make clone-stt IMPL=mlx-whisper    # Apple Silicon MLX batch engine
-make clone-stt IMPL=faster-whisper # CTranslate2 batch engine (CPU / CUDA)
-
-make clone-web                     # client-web (optional)
-make clone-cli                     # client-cli (optional)
 ```
 
 ### Install
 
 ```bash
-make setup    # creates .venv (Python 3.13) + installs all cloned plugins and clients
+make setup    # creates .venv (Python 3.13) + installs every plugin and client
 
 # Web client frontend — Node side needs a separate install
 cd client-web/web && npm install && cd ../..
@@ -343,7 +334,7 @@ Plugin errors (`PluginErrorCode`) are translated to Core `ERR####` codes at the 
 ## Testing
 
 ```bash
-make test    # Go tests + pytest for every cloned plugin-* and client-cli
+make test    # Go tests + pytest for every plugin-* and client-cli
 ```
 
 Or run each suite directly (`PY=$PWD/.venv/bin/python3`):
@@ -384,8 +375,8 @@ Every plugin test suite mocks its ML runtime, so no model weights are required �
 | [docs/plans/roadmap.md](docs/plans/roadmap.md) | What is not built yet |
 
 Contributing with an AI agent? Start at [AGENTS.md](AGENTS.md) (`CLAUDE.md` just
-imports it). Repeatable workflows live in [.codex/skills/](.codex/skills/), and each `plugin-*`
-repository carries its own `AGENTS.md`.
+imports it). Repeatable workflows live in [.codex/skills/](.codex/skills/), and `core/` and each `plugin-*`
+directory carry their own `AGENTS.md`.
 
 ## License
 

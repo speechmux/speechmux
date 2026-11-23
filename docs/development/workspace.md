@@ -1,43 +1,45 @@
-# Working in this workspace
+# Working in this repository
 
-How the multi-repo workspace fits together and which commands actually work.
+How the components fit together and which commands actually work.
 
 ---
 
 ## Repository layout
 
-This repository is workspace glue only. It tracks:
+The root holds the glue that ties the components together:
 
 ```
 AGENTS.md  CLAUDE.md (@AGENTS.md)  README.md  LICENSE
 Makefile  workspace.yaml  docker-compose.yml  .env.example
 .dockerignore  .gitignore
+.github/workflows/proto.yaml
 deploy/docker/*.yaml
 scripts/remote-access.sh
 docs/
 .codex/skills/   .claude/skills/
 ```
 
-Everything else is a separate GitHub repository under `github.com/speechmux/`, cloned into
-this directory and **gitignored here** (`proto/`, `core/`, `plugin-*/`, `client-*/`).
-Changes inside those directories are commits in *their* repos.
+Every component is a directory beside it, with its own build definition, `Makefile`,
+`.gitignore` and tests. They were separate repositories until
+[ADR 0015](../decisions/0015-monorepo.md); their history was imported, so
+`git log -- <dir>` goes back past the merge.
 
-| Directory | Repo | Language | Contains |
-|-----------|------|----------|----------|
-| `proto/` | `proto` | Protobuf | `.proto` files + generated Go and Python code, `buf` config, CI |
-| `core/` | `core` | Go | The Core server and `ctl` supervisor |
-| `plugin-vad/` | `plugin-vad` | Python | VAD plugin host framework + dummy engine |
-| `plugin-vad-silero/` | `plugin-vad-silero` | Python | Silero VAD engine |
-| `plugin-stt/` | `plugin-stt` | Python | STT plugin host framework + dummy engine |
-| `plugin-stt-sherpa-onnx/` | `plugin-stt-sherpa-onnx` | Python | sherpa-onnx Zipformer streaming engine |
-| `plugin-stt-mlx-whisper/` | `plugin-stt-mlx-whisper` | Python | mlx-whisper batch engine (Apple Silicon) |
-| `plugin-stt-faster-whisper/` | `plugin-stt-faster-whisper` | Python | faster-whisper batch engine (CPU/CUDA) |
-| `client-web/` | `client-web` | TS + Python | Next.js frontend + FastAPI WebSocket proxy |
-| `client-cli/` | `client-cli` | Python | `speechmux file \| batch \| mic` |
+| Directory | Language | Contains |
+|-----------|----------|----------|
+| `proto/` | Protobuf | `.proto` files + generated Go and Python code, `buf` config |
+| `core/` | Go | The Core server and `ctl` supervisor |
+| `plugin-vad/` | Python | VAD plugin host framework + dummy engine |
+| `plugin-vad-silero/` | Python | Silero VAD engine |
+| `plugin-stt/` | Python | STT plugin host framework + dummy engine |
+| `plugin-stt-sherpa-onnx/` | Python | sherpa-onnx Zipformer streaming engine |
+| `plugin-stt-mlx-whisper/` | Python | mlx-whisper batch engine (Apple Silicon) |
+| `plugin-stt-faster-whisper/` | Python | faster-whisper batch engine (CPU/CUDA) |
+| `client-web/` | TS + Python | Next.js frontend + FastAPI WebSocket proxy |
+| `client-cli/` | Python | `speechmux file \| batch \| mic` |
 
-Only `proto` has CI (`proto/.github/workflows/ci.yaml`: codegen verification, `buf lint`,
-`buf breaking` on PRs, and a tagged Python package release). Everything else is verified
-locally.
+Only `proto` has CI (`.github/workflows/proto.yaml`, triggered by changes under `proto/`:
+codegen verification, `buf lint`, `buf breaking` on PRs, and a tagged Python package
+release). Everything else is verified locally.
 
 ---
 
@@ -62,23 +64,12 @@ explicitly: `.venv/bin/python3`. Every plugin `Makefile` defaults to `PYTHON ?= 
 ## Setup
 
 ```bash
-make clone-base                     # proto, core, plugin-vad, plugin-stt
-make clone-vad IMPL=silero
-make clone-stt IMPL=sherpa-onnx     # also: mlx-whisper, faster-whisper
-make clone-web
-make clone-cli
-make setup                          # .venv + editable installs of everything cloned
-```
-
-`make clone-*` uses SSH (`git@github.com:speechmux/…`) and skips directories that already
-exist. The repositories are public, so HTTPS clones work too when SSH is not configured:
-
-```bash
-git clone https://github.com/speechmux/core.git core
+git clone git@github.com:speechmux/speechmux.git && cd speechmux
+make setup                          # .venv + editable installs of every plugin and client
 ```
 
 `make setup` also writes `proto/gen/python/pyproject.toml` if it is missing, then installs
-`speechmux-proto` and every cloned plugin and client in editable mode. It pulls the real ML
+`speechmux-proto` and every plugin and client in editable mode. It pulls the real ML
 runtimes (torch, mlx-whisper, faster-whisper, sherpa-onnx), which is a large download.
 
 **Light setup.** Every plugin test suite mocks its ML runtime, so tests, lint and typecheck
@@ -104,7 +95,7 @@ You cannot *run* an engine this way — only import and test it.
 |---------|--------------|
 | `make build` | `go build -o core/bin/speechmux-core ./cmd/speechmux-core` |
 | `make proto` | `cd proto && make generate`, then reinstall `speechmux-proto` |
-| `cd core && make build` | Same as `make build`, from inside the repo |
+| `cd core && make build` | Same as `make build`, from inside `core/` |
 | `cd core && make loadtest` | Builds `core/bin/loadtest` |
 | `cd client-web/web && npm ci` | Frontend dependencies |
 
@@ -145,7 +136,7 @@ Run on the current tree; see [testing.md](testing.md) for details and the failur
 | `docker compose --profile sherpa --profile faster-whisper config` | ✅ valid |
 | `speechmux-core ctl status --workspace workspace.yaml` | ✅ works |
 
-`make test` runs the Go suite and every cloned Python suite in sequence. Because it reaches
+`make test` runs the Go suite and every Python suite in sequence. Because it reaches
 `plugin-stt-sherpa-onnx`, it currently hangs. Run the suites individually until that is
 fixed.
 
@@ -184,22 +175,21 @@ Details for Docker and remote access: [../operations/deployment.md](../operation
 
 ---
 
-## Making a cross-repo change
+## Making a cross-component change
 
-1. Decide which repos are affected. A wire-format change is always proto-first.
+1. Decide which components are affected. A wire-format change is always proto-first.
 2. `proto`: edit the `.proto`, `buf lint`, `make generate`, reinstall the Python package.
    Follow the [`change-proto`](../../.codex/skills/change-proto/SKILL.md) skill.
 3. `core`: update the Go side, add tests, `go test ./...`.
 4. Plugins: update the Python side, add tests, run each suite.
 5. Clients: update `client-cli` and/or `client-web`.
-6. Workspace: update `docs/`, and any config file or `docker-compose.yml` entry involved.
-7. Commit **per repository**. Nothing in a sub-repo is committed by a commit here.
+6. Root: update `docs/`, and any config file or `docker-compose.yml` entry involved.
+7. Commit it as **one** change. Do not split it per component.
 
 `core/go.mod` carries a committed `replace github.com/speechmux/proto => ../proto`, so
-Core builds against whatever is checked out in the sibling `proto/` directory. A regenerated
-`proto/gen/go` is visible to Core immediately with no tag or `go.mod` change — which also
-means `proto/` must be cloned for Core to build, and the two checkouts must be kept at
-compatible commits by hand.
+Core builds against the sibling `proto/` directory. A regenerated `proto/gen/go` is
+visible to Core immediately with no tag or `go.mod` change — and a half-regenerated one
+breaks the Core build just as immediately.
 
 ---
 

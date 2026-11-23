@@ -13,7 +13,7 @@ decisions, and never sees a client. Everything else lives in Core.
 
 ## Processes
 
-| Process | Language | Repo | Listens on | Role |
+| Process | Language | Directory | Listens on | Role |
 |---------|----------|------|-----------|------|
 | `speechmux-core` | Go | `core` | gRPC `:50051`, HTTP `:8090`, WS `:8091` | Sessions, EPD, routing, decode scheduling, transports |
 | VAD plugin | Python | `plugin-vad` + an engine | UDS or TCP | Per-frame speech/silence probability |

@@ -18,7 +18,7 @@ exists** — the portable Whisper option, in contrast to `plugin-stt-mlx-whisper
 | Entry-point name (`server.engine:`) | `faster_whisper` |
 | Class | `speechmux_plugin_stt_faster_whisper.engine:FasterWhisperEngine` |
 | Core endpoint `id` (`engine_hint`) | `faster-whisper` (Docker `plugins-docker.yaml`) |
-| Config file | `config/inference-faster-whisper.yaml` in **this** repo; Docker: `deploy/docker/inference-faster-whisper-docker.yaml` |
+| Config file | `config/inference-faster-whisper.yaml` in **this** directory; Docker: `deploy/docker/inference-faster-whisper-docker.yaml` |
 
 This is the one Whisper engine that ships its own config file rather than using one in
 `plugin-stt/config/`.

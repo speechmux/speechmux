@@ -48,7 +48,8 @@ If the ports belong to OrbStack/Docker, the Compose stack is what you are testin
 start native plugins on top of it (Core will fail to bind and you will test the wrong thing).
 
 **Image age matters.** Core and plugin images built before the current repo HEAD have bitten
-twice already (see Pitfalls). If an image is older than the last commit in its repo, rebuild
+twice already (see Pitfalls). If an image is older than the last commit under its directory
+(`git log -1 --format=%cd -- core/`), rebuild
 it first:
 
 ```bash

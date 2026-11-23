@@ -56,7 +56,7 @@ something a reasonable engineer would otherwise do.>
 
 ## Docker
 
-<Only if this repo ships a Dockerfile: build context, base image, GPU requirements,
+<Only if this engine ships a Dockerfile: build context, base image, GPU requirements,
 lockfile reuse, model mounting. Delete the section otherwise.>
 
 ## Test suite status

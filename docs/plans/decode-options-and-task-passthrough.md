@@ -37,7 +37,7 @@ Everything downstream already works: `TranscribeRequest` carries both fields, an
 
 ## Scope
 
-Core (`core` repo) only. No proto change, no plugin change.
+Core (`core/`) only. No proto change, no plugin change.
 
 ## Steps
 

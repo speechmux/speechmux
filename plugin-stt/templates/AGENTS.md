@@ -1,16 +1,16 @@
 # AGENTS.md — STT engine adapter
 
-**This file is identical in every `plugin-stt-*` repository.** It is copied verbatim from
-`plugin-stt/templates/AGENTS.md`. Do not edit it in an engine repo — change the template
+**This file is identical in every `plugin-stt-*` directory.** It is copied verbatim from
+`plugin-stt/templates/AGENTS.md`. Do not edit it in an engine directory — change the template
 and re-copy it everywhere. Everything specific to *this* engine is in `ENGINE.md` beside
 this file.
 
-Assumes the workspace root `AGENTS.md` and the host framework rules in
+Assumes the repository root `AGENTS.md` and the host framework rules in
 `../plugin-stt/AGENTS.md`. Read both, then `ENGINE.md`.
 
 ---
 
-## What this repository is
+## What this package is
 
 One engine adapter: a single class that implements one of the two STT Protocols from
 `speechmux_plugin_stt.engine.base` and registers itself through a Python entry point.
@@ -20,10 +20,10 @@ One engine adapter: a single class that implements one of the two STT Protocols 
 | `InferenceEngine` | Engines that decode a whole segment at once (Whisper family) | `Transcribe` (unary) |
 | `StreamingInferenceEngine` | Engines that decode continuously | `TranscribeStream` (bidi) |
 
-`ENGINE.md` states which one this repo implements.
+`ENGINE.md` states which one this package implements.
 
 The host framework (`plugin-stt`) owns the gRPC server, the `--config` YAML loader, the
-semaphore, `HealthCheck` and `GetCapabilities`. **None of that lives here.** This repo has
+semaphore, `HealthCheck` and `GetCapabilities`. **None of that lives here.** This package has
 no `main.py`, no server code, and reads no config file itself.
 
 ## Standard layout
@@ -35,7 +35,7 @@ plugin-stt-<impl>/
 ├── ENGINE.md                 # engine-specific rules, pitfalls and rationale
 ├── README.md                 # user-facing: install, config keys, model download
 ├── LICENSE
-├── Makefile                  # identical across every engine repo
+├── Makefile                  # identical across every engine
 ├── pyproject.toml            # dependency + entry point
 ├── config/                   # OPTIONAL — only when the engine ships its own inference-*.yaml
 ├── src/speechmux_plugin_stt_<impl>/
@@ -106,7 +106,7 @@ make lint        # ruff check src/
 make typecheck   # mypy src/
 ```
 
-`Makefile` is identical across engine repos and defaults to `PYTHON ?= ../.venv/bin/python3`.
+`Makefile` is identical across engines and defaults to `PYTHON ?= ../.venv/bin/python3`.
 Do not diverge from it.
 
 ## Testing rules
@@ -137,13 +137,13 @@ Never depend on Core, another engine, or `grpc` server machinery.
 - Let a streaming `stream()` raise on iterator exhaustion.
 - Write a test that imports the real runtime, or build a mock without setting the
   attributes used in loop conditions.
-- Diverge the `Makefile` from the other engine repos.
+- Diverge the `Makefile` from the other engines.
 - Edit this file. Edit `plugin-stt/templates/AGENTS.md` and re-copy.
 - Put anything in `CLAUDE.md` other than `@AGENTS.md`.
 
 ## Where the engine-specific rules are
 
-`ENGINE.md` in this repo: which Protocol, declared capabilities, config keys the engine
+`ENGINE.md` in this directory: which Protocol, declared capabilities, config keys the engine
 reads, its concurrency characteristics, runtime/API quirks, the pitfalls found while
 building it, and its test-suite status. Read it before changing `engine.py`.
 

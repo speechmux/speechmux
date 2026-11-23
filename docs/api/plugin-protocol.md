@@ -178,7 +178,7 @@ requests), a human-readable `message`, and `last_error`.
 
 ## Compatibility rules
 
-Enforced by `buf lint` and `buf breaking` in the proto repo's CI:
+Enforced by `buf lint` and `buf breaking` in CI (`.github/workflows/proto.yaml`):
 
 - **Additive only.** New fields, new RPCs, new enum values.
 - Deleting a field, renumbering it, or changing its type is forbidden. `reserved` both the

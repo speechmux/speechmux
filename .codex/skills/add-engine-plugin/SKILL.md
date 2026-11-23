@@ -6,7 +6,7 @@ Add a new STT or VAD engine to SpeechMux.
 
 - Adding a new speech recognition backend (`plugin-stt-<impl>`).
 - Adding a new voice activity detector (`plugin-vad-<impl>`).
-- Wiring an engine repo that already exists into the workspace, Core and Docker.
+- Wiring an engine directory that already exists into `workspace.yaml`, Core and Docker.
 
 **Do not** use this for changing an existing engine's behaviour, or for adding a
 language/model to an engine that already exists — that is a config change only.
@@ -15,7 +15,7 @@ language/model to an engine that already exists — that is a config change only
 
 - Read [../../../AGENTS.md](../../../AGENTS.md) §10 and
   [docs/architecture/plugin-system.md](../../../docs/architecture/plugin-system.md).
-- Workspace set up: `.venv` exists, `proto`, `core`, `plugin-stt`/`plugin-vad` cloned.
+- Workspace set up: `.venv` exists (`make setup`, or the light install in `AGENTS.md` §4).
 - Know which contract you are implementing:
 
 | Engine kind | Protocol | Entry-point group | Capability it must report |
@@ -31,10 +31,11 @@ Pick the closest existing engine as your reference: `plugin-stt-faster-whisper` 
 
 ## Steps
 
-### 1. Create the engine repository
+### 1. Create the engine directory
 
-Create `github.com/speechmux/plugin-{stt,vad}-<impl>` and clone it into the workspace. The
-layout is the same for every engine:
+Create `plugin-{stt,vad}-<impl>/` at the repository root. The `Makefile` globs
+`plugin-stt-*` and `plugin-vad-*`, so the name is what wires it into `make setup` and
+`make test`. The layout is the same for every engine:
 
 ```
 plugin-stt-<impl>/
@@ -61,10 +62,10 @@ printf '@AGENTS.md\n' > plugin-stt-<impl>/CLAUDE.md           # import, not a co
 ```
 
 (`plugin-vad/templates/` for a VAD engine.) `AGENTS.md` holds the rules common to every
-engine adapter and must stay identical across repos; everything specific to this engine —
+engine adapter and must stay identical across engines; everything specific to this engine —
 capabilities, config keys, runtime quirks, pitfalls, test status — goes in `ENGINE.md`.
 
-`Makefile` is identical across every engine repo (`install`, `test`, `lint`, `typecheck`,
+`Makefile` is identical across every engine (`install`, `test`, `lint`, `typecheck`,
 `clean`, with `PYTHON ?= ../.venv/bin/python3`). Copy it rather than writing a new one.
 
 ### 2. `pyproject.toml`
@@ -154,7 +155,7 @@ Requirements:
 
 ### 4. Write tests that never load a model
 
-Mock the runtime before importing the engine. Copy the pattern from the reference repo:
+Mock the runtime before importing the engine. Copy the pattern from the reference engine:
 
 ```python
 import sys
@@ -182,7 +183,7 @@ terminates. This is a live bug in `plugin-stt-sherpa-onnx`
 ### 5. Add an engine section to the plugin config
 
 In `plugin-stt/config/<a config file>.yaml` (or `plugin-vad/config/vad.yaml`), or a new file
-in your own repo's `config/` if the engine needs its own (like
+in the engine's own `config/` if it needs one (like
 `plugin-stt-faster-whisper/config/inference-faster-whisper.yaml`):
 
 ```yaml
@@ -251,18 +252,18 @@ Optionally add it to the `Makefile`'s default `PROFILES`.
 
 ## Files you will touch
 
-| File | Repo |
-|------|------|
-| `plugin-{stt,vad}-<impl>/**` (new) | new repo |
-| `plugin-{stt,vad}/config/*.yaml` or your own `config/` | plugin host or new repo |
+| File | Component |
+|------|-----------|
+| `plugin-{stt,vad}-<impl>/**` (new) | the new engine |
+| `plugin-{stt,vad}/config/*.yaml` or the engine's own `config/` | plugin host or the new engine |
 | `core/config/plugins.yaml` | `core` |
-| `workspace.yaml` | workspace |
-| `Makefile` (`PROFILES`, `DOCKER_PROFILE`, `docker-logs*`) | workspace |
-| `docker-compose.yml`, `deploy/docker/*.yaml` | workspace |
-| `.env.example` (if it needs a `MODELS_DIR`) | workspace |
-| `README.md` component table and clone instructions | workspace |
-| `docs/architecture/plugin-system.md`, `docs/operations/deployment.md` | workspace |
-| `plugin-{stt,vad}-<impl>/AGENTS.md` (verbatim template copy) and `ENGINE.md` (filled in) | new repo |
+| `workspace.yaml` | root |
+| `Makefile` (`PROFILES`, `DOCKER_PROFILE`, `docker-logs*`) | root |
+| `docker-compose.yml`, `deploy/docker/*.yaml` | root |
+| `.env.example` (if it needs a `MODELS_DIR`) | root |
+| `README.md` component table | root |
+| `docs/architecture/plugin-system.md`, `docs/operations/deployment.md` | root |
+| `plugin-{stt,vad}-<impl>/AGENTS.md` (verbatim template copy) and `ENGINE.md` (filled in) | the new engine |
 
 ---
 
@@ -331,7 +332,7 @@ retries in the background, so wait one health-probe interval before concluding i
 
 ## Done when
 
-- [ ] The engine repo exists with `pyproject.toml`, `Makefile`, `README.md`, `LICENSE`,
+- [ ] The engine directory exists with `pyproject.toml`, `Makefile`, `README.md`, `LICENSE`,
       `src/`, `tests/`.
 - [ ] `AGENTS.md` is byte-identical to `plugin-{stt,vad}/templates/AGENTS.md`
       (`cmp` returns 0), `ENGINE.md` has no `<placeholder>` left, and `CLAUDE.md` contains
@@ -347,4 +348,5 @@ retries in the background, so wait one health-probe interval before concluding i
 - [ ] `README.md`'s component table and
       [docs/architecture/plugin-system.md](../../../docs/architecture/plugin-system.md)
       list the new engine.
-- [ ] Committed in each affected repository separately.
+- [ ] The engine imports only the host framework's public API (`engine/base.py`) — no
+      framework internals, no relative paths into a sibling directory.

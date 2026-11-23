@@ -23,7 +23,7 @@ skill, which covers the Go struct, the default, all copies of the file, and this
 | `plugin-stt-faster-whisper/config/inference-faster-whisper.yaml` | same | faster-whisper endpoint and model |
 | `*-dummy.yaml`, `core/config/plugins-dummy.yaml` | same | No-model engines for load testing |
 
-`core/config/workspace.yaml` also exists inside the core repo as a self-contained example.
+`core/config/workspace.yaml` also exists inside `core/` as a self-contained example.
 The workspace supervisor uses the root `workspace.yaml`, which has the two-level profile
 system.
 

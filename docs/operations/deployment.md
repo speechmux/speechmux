@@ -111,8 +111,8 @@ endpoint simply stays circuit-open.
   editor or `sed -i` creates a new inode that the running container does not see, so
   `POST /admin/reload` reloads the *old* file. After any edit: `docker compose up -d <service>`
   (recreates the container and the mount).
-- Images do not rebuild themselves. `docker compose up -d` after a `git pull` in `core/` or a
-  plugin repo still runs the old image. Check `docker compose images` (CREATED column) and
+- Images do not rebuild themselves. `docker compose up -d` after a `git pull` that changes `core/` or a
+  plugin still runs the old image. Check `docker compose images` (CREATED column) and
   `make docker-build` when in doubt — a stale `stt-*` image that predates the plugin
   framework's `STREAMING_MODE_BATCH_ONLY` fix is excluded from batch routing by a current
   Core and every decode fails with ERR2005.

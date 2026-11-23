@@ -1,17 +1,17 @@
 # Skill: verify-workspace
 
-Run the build, test and lint sweep across every repository in the workspace, and report what
+Run the build, test and lint sweep across every component in the repository, and report what
 actually happened.
 
 ## When to use this
 
 - Before declaring any change complete.
-- After cloning or setting up the workspace, to establish a baseline.
+- After cloning the repository and setting it up, to establish a baseline.
 - When a command in a document needs to be confirmed still correct.
 
-The workspace spans ten repositories with three toolchains and only one of them has CI, so
-local verification is the only gate. Run the suites for the repos your change touched at
-minimum; run everything before finishing a cross-repo change.
+The repository holds ten components with three toolchains and only `proto` has CI, so
+local verification is the only gate. Run the suites for the components your change touched
+at minimum; run everything before finishing a cross-component change.
 
 ## Prerequisites
 
@@ -34,7 +34,7 @@ cd /path/to/speechmux
 ls -d proto core plugin-* client-* 2>/dev/null
 ```
 
-Only cloned repos can be verified. A missing one is a gap in coverage, not a pass — say so.
+All ten should be listed. A missing directory is a broken checkout, not something to skip.
 
 ### 2. Go: build, test, vet
 
@@ -56,12 +56,12 @@ Do **not** run `gofmt -w`. It reformats 29 pre-existing files and would bury you
 
 ```bash
 cd proto && buf lint                                    # expect: clean
-cd proto && buf breaking --against '.git#branch=main'   # what CI runs on PRs
+cd proto && buf breaking --against '../.git#branch=main,subdir=proto'   # what CI runs on PRs
 cd proto && make generate && git diff --stat gen/       # expect: empty if you changed no .proto
 ```
 
 A non-empty `gen/` diff when you changed no `.proto` means your local `protoc`/
-`grpcio-tools` differ from the versions the repo was generated with. Revert it
+`grpcio-tools` differ from the versions the code was generated with. Revert it
 (`git checkout -- gen/`) rather than committing the churn.
 
 ### 4. Python
@@ -136,7 +136,7 @@ The known divergence is `decode.max_pending` (docker-only, dead) and `logging.fo
 
 ### 7. Engine `AGENTS.md` template drift
 
-Every engine repo's `AGENTS.md` must be byte-identical to its host framework's template:
+Every engine's `AGENTS.md` must be byte-identical to its host framework's template:
 
 ```bash
 for d in plugin-stt-*/; do cmp -s plugin-stt/templates/AGENTS.md "$d/AGENTS.md" || echo "DRIFT: $d"; done
@@ -146,7 +146,7 @@ for d in core plugin-*/; do [ "$(cat "$d/CLAUDE.md" 2>/dev/null)" = "@AGENTS.md"
 ```
 
 Expect no output. A `DRIFT` line means someone edited a copy instead of the template; a
-`CLAUDE.md` line means a repo's `CLAUDE.md` is missing or holds something other than the
+`CLAUDE.md` line means a component's `CLAUDE.md` is missing or holds something other than the
 `@AGENTS.md` import.
 
 ### 8. Runtime (when the change warrants it)
@@ -173,7 +173,7 @@ anything that failed.
 
 - Separate **pre-existing** failures from **new** ones. The baseline is in
   [docs/development/testing.md](../../../docs/development/testing.md#known-issues).
-- Say explicitly what you did **not** run and why (repo not cloned, needs `torch`, needs
+- Say explicitly what you did **not** run and why (needs `torch`, needs
   model weights, needs Docker images).
 - Never report a suite as passing because it did not print an error — a hung suite prints
   nothing.
@@ -189,14 +189,14 @@ anything that failed.
 - **Reporting the pre-existing ruff/mypy/gofmt findings as your regressions.**
 - **Running `gofmt -w` to make `gofmt -l` clean.** 29 unrelated files, diff buried.
 - **Committing regenerated `proto/gen/` churn** from a different toolchain version.
-- **Claiming an untested repository passed** because it was not cloned.
+- **Claiming an untested component passed** because its suite was skipped.
 - **Skipping `-race`** on a change to `stream`, `session` or `transport`.
 
 ---
 
 ## Done when
 
-- [ ] Every repository your change touched has had its suite run.
+- [ ] Every component your change touched has had its suite run.
 - [ ] `go vet`, `buf lint` and `tsc --noEmit` are clean.
 - [ ] Every failure is classified as pre-existing (with a link) or new (with the output).
 - [ ] Everything you could not run is listed with a reason.

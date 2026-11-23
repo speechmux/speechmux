@@ -1,7 +1,7 @@
 # AGENTS.md — plugin-stt
 
-STT plugin **host framework**. Assumes the workspace root `AGENTS.md`; only what is
-specific to this repository is here.
+STT plugin **host framework**. Assumes the repository root `AGENTS.md`; only what is
+specific to this package is here.
 
 Root instructions: `../AGENTS.md` · Architecture:
 `../docs/architecture/plugin-system.md` · Wire contract:
@@ -12,10 +12,10 @@ Root instructions: `../AGENTS.md` · Architecture:
 ## Role
 
 The gRPC server, the config loader and the engine contracts for speech recognition. Ships
-no real model — only a `dummy` engine. Actual decoding lives in engine adapter repos
+no real model — only a `dummy` engine. Actual decoding lives in engine adapter packages
 (`plugin-stt-sherpa-onnx`, `plugin-stt-mlx-whisper`, `plugin-stt-faster-whisper`).
 
-Unlike `plugin-vad`, this repo serves **two** engine contracts from one servicer, and it is
+Unlike `plugin-vad`, this package serves **two** engine contracts from one servicer, and it is
 what tells Core which decode path a session takes.
 
 ## Two engine contracts
@@ -58,23 +58,23 @@ python -m speechmux_plugin_stt.main --config plugin-stt/config/inference-onnx.ya
 |------|----------|
 | `src/speechmux_plugin_stt/main.py` | Arg parsing, YAML loading, engine construction, `engine.load()`, gRPC server |
 | `src/speechmux_plugin_stt/service/inference_servicer.py` | `Transcribe`, `TranscribeStream`, `GetCapabilities`, `HealthCheck`, semaphore, error mapping |
-| `src/speechmux_plugin_stt/engine/base.py` | `InferenceEngine`, `StreamingInferenceEngine`, `TranscribeResult`, `pcm16_rms` — **public API for every engine repo** |
+| `src/speechmux_plugin_stt/engine/base.py` | `InferenceEngine`, `StreamingInferenceEngine`, `TranscribeResult`, `pcm16_rms` — **public API for every engine package** |
 | `src/speechmux_plugin_stt/engine/registry.py` | Entry-point lookup (`speechmux.stt_engine`) |
 | `src/speechmux_plugin_stt/engine/dummy.py` | No-model engine for load testing |
 | `config/inference-*.yaml` | Reference configs, one per engine |
-| `templates/AGENTS.md` | **Canonical `AGENTS.md` for every `plugin-stt-*` engine repo** — copied verbatim into each |
-| `templates/ENGINE.md` | Skeleton for an engine repo's engine-specific document |
+| `templates/AGENTS.md` | **Canonical `AGENTS.md` for every `plugin-stt-*` engine** — copied verbatim into each |
+| `templates/ENGINE.md` | Skeleton for an engine's engine-specific document |
 
-`engine/base.py` is a published API. Downstream engine repos import it by path.
+`engine/base.py` is a published API. Engine packages import it by path.
 
-## Engine repos share one `AGENTS.md`, owned here
+## Engines share one `AGENTS.md`, owned here
 
-Every `plugin-stt-*` repository carries a byte-identical `AGENTS.md` copied from
+Every `plugin-stt-*` directory carries a byte-identical `AGENTS.md` copied from
 `templates/AGENTS.md`, plus its own `ENGINE.md` for engine-specific rules, plus a
 `CLAUDE.md` containing only `@AGENTS.md`. A new engine author copies both templates, adds
 that one-line file, and fills in `ENGINE.md` only.
 
-When you change `templates/AGENTS.md`, re-copy it into **every** engine repo in the same
+When you change `templates/AGENTS.md`, re-copy it into **every** engine directory in the same
 piece of work, and verify with:
 
 ```bash
@@ -86,13 +86,13 @@ engine's `ENGINE.md`.
 
 ## Config files live here for engines that do not own one
 
-`config/inference-onnx.yaml` and `config/inference-mlx.yaml` sit in this repo even though
-they configure engines in other repos, because that is where the process is launched from.
+`config/inference-onnx.yaml` and `config/inference-mlx.yaml` sit in this directory even though
+they configure engines in other directories, because that is where the process is launched from.
 A file may contain sections for engines that are not installed — only
 `engine.<server.engine>` is read.
 
 `config/inference-onnx.yaml` currently carries a `torch_whisper:` section for an engine
-repo that does not exist (`../docs/plans/roadmap.md`).
+that does not exist (`../docs/plans/roadmap.md`).
 
 ## Build, test, lint
 
@@ -114,15 +114,15 @@ Keep it — `plugin-vad` lacks it and fails.
 ## Dependencies
 
 `grpcio`, `protobuf`, `pyyaml`, `speechmux-proto`. **No ML runtime, no numpy** — those
-belong in engine repos.
+belong in engine packages.
 
 ## Changing the engine Protocols
 
 Both `InferenceEngine` and `StreamingInferenceEngine` are contracts implemented in other
-repositories. A change here fails downstream at runtime, not at build time.
+packages. A change here fails in the engines at runtime, not at build time.
 
 - Prefer optional attributes with a framework-side default.
-- Update `engine/dummy.py`, `tests/dummy_streaming_engine.py` and every engine repo in the
+- Update `engine/dummy.py`, `tests/dummy_streaming_engine.py` and every engine in the
   same piece of work.
 - Identity attributes are **class attributes, not methods** — the servicer reads them
   directly for `GetCapabilities`. Keep it that way.

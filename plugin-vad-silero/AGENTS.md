@@ -1,23 +1,23 @@
 # AGENTS.md — VAD engine adapter
 
-**This file is identical in every `plugin-vad-*` repository.** It is copied verbatim from
-`plugin-vad/templates/AGENTS.md`. Do not edit it in an engine repo — change the template
+**This file is identical in every `plugin-vad-*` directory.** It is copied verbatim from
+`plugin-vad/templates/AGENTS.md`. Do not edit it in an engine directory — change the template
 and re-copy it everywhere. Everything specific to *this* engine is in `ENGINE.md` beside
 this file.
 
-Assumes the workspace root `AGENTS.md` and the host framework rules in
+Assumes the repository root `AGENTS.md` and the host framework rules in
 `../plugin-vad/AGENTS.md`. Read both, then `ENGINE.md`.
 
 ---
 
-## What this repository is
+## What this package is
 
 One engine adapter: a single class implementing the `VADEngine` Protocol from
 `speechmux_plugin_vad.engine.base`, registered through a Python entry point.
 
 The host framework (`plugin-vad`) owns the gRPC server, the per-session `StreamVAD` stream,
 the `--config` YAML loader, the session-capacity check, `HealthCheck` and `GetCapabilities`.
-**None of that lives here.** This repo has no `main.py`, no server code, and reads no config
+**None of that lives here.** This package has no `main.py`, no server code, and reads no config
 file itself.
 
 ## Standard layout
@@ -29,7 +29,7 @@ plugin-vad-<impl>/
 ├── ENGINE.md                 # engine-specific rules, pitfalls and rationale
 ├── README.md                 # user-facing: install, config keys, model download
 ├── LICENSE
-├── Makefile                  # identical across every engine repo
+├── Makefile                  # identical across every engine
 ├── pyproject.toml            # dependency + entry point
 ├── src/speechmux_plugin_vad_<impl>/
 │   ├── __init__.py
@@ -95,7 +95,7 @@ make lint        # ruff check src/
 make typecheck   # mypy src/
 ```
 
-`Makefile` is identical across engine repos and defaults to `PYTHON ?= ../.venv/bin/python3`.
+`Makefile` is identical across engines and defaults to `PYTHON ?= ../.venv/bin/python3`.
 Do not diverge from it.
 
 ## Testing rules
@@ -120,13 +120,13 @@ Never depend on Core, another engine, or `grpc` server machinery.
 - Share mutable model state across sessions.
 - Return more or fewer than one result per `process_frame` call.
 - Write a test that needs downloaded model weights.
-- Diverge the `Makefile` from the other engine repos.
+- Diverge the `Makefile` from the other engines.
 - Edit this file. Edit `plugin-vad/templates/AGENTS.md` and re-copy.
 - Put anything in `CLAUDE.md` other than `@AGENTS.md`.
 
 ## Where the engine-specific rules are
 
-`ENGINE.md` in this repo: declared capabilities, how per-session state is isolated, the
+`ENGINE.md` in this directory: declared capabilities, how per-session state is isolated, the
 frame-size handling, config keys the engine reads, runtime quirks, pitfalls, and test-suite
 status. Read it before changing the engine module.
 

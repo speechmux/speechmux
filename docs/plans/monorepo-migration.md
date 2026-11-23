@@ -1,14 +1,13 @@
 # Monorepo migration
 
-**Status: in progress on the `monorepo` branch. Steps 0–4 are done: all ten components are
-imported with history. Not pushed.**
+**Status: in progress on the `monorepo` branch. Steps 0–5 are done: all ten components are
+imported with history and the documentation describes one repository. Not pushed.**
 
 This is the hand-off for moving every SpeechMux component into this repository
 (`speechmux/speechmux`). It is self-contained: an agent or developer who has not seen the
 discussion that led here can finish the work from this file alone.
 
-Delete this document, and the notice at the top of `AGENTS.md`, when the migration has
-merged to `main` (step 8).
+Delete this document when the migration has merged to `main` (step 8).
 
 ---
 
@@ -20,9 +19,8 @@ merged to `main` (step 8).
 | Previous multi-repo workspace | `~/src/speechmux` — leave it untouched; it is the reference and the rollback |
 | Component repositories | `github.com/speechmux/<name>`, ten of them, listed below |
 
-While this plan is open, the rest of `AGENTS.md` still describes the **old** multi-repo
-layout (§2, §5 rule 2, the `make clone-*` commands). Do not run `make clone-*` in this
-checkout — the component directories are being imported with history, not cloned.
+`AGENTS.md`, `README.md` and `docs/` already describe the merged layout (step 5). The
+notice that used to sit at the top of `AGENTS.md` was removed in that step.
 
 ---
 
@@ -33,7 +31,7 @@ each component lands at the path it already occupies in the workspace (`proto/`,
 `plugin-*/`, `client-*/`), so the `Makefile`, `docker-compose.yml`, the Dockerfiles and
 every relative link in `docs/` keep working.
 
-Why, in short (the full reasoning goes into ADR 0015, step 5):
+Why, in short (the full reasoning is in [ADR 0015](../decisions/0015-monorepo.md)):
 
 - The components were never independently buildable. `core/go.mod` requires
   `github.com/speechmux/proto v0.0.0` with `replace … => ../proto`, and four Docker images
@@ -57,7 +55,7 @@ What the multi-repo layout was for, and how that goal is kept:
 
 ### Invariants that keep a later split cheap
 
-These already hold. Keep them holding after the merge, and state them in ADR 0015:
+These already hold. Keep them holding after the merge; ADR 0015 and `AGENTS.md` §2 state them:
 
 1. Every engine keeps its own directory and its own `pyproject.toml`.
 2. An engine uses only the host framework's public API — no imports of framework
@@ -179,29 +177,35 @@ done
       no .proto files`) — expect that one failure. The workflow has not run on GitHub.
       The `v*.*.*` tag trigger for the Python package artifact is unchanged; it is now a
       repository-wide tag pattern, to be revisited when `proto` is actually published.
-- [ ] Search for anything else that assumes separate repositories:
+- [x] Search for anything else that assumes separate repositories:
       `grep -rnE 'make clone-|clone-base|git clone|gitignored|its own (GitHub )?repo' .`
-      Known hits before the import: `Makefile`, `AGENTS.md`, `README.md`,
-      `docs/development/workspace.md`, `docs/decisions/0001-multi-repo-workspace.md`.
-      The imported component `README.md`/`AGENTS.md` files will add more.
+      A wider search (`\brepos?\b|repositor|cloned`) found more in the component
+      `AGENTS.md`/`ENGINE.md` files, four skills and several `docs/` pages; all fixed in
+      step 5. Left as they are on purpose: ADR 0001 and one rationale line in ADR 0008
+      (accepted ADRs are not rewritten), and the commented-out
+      `git+ssh://…/proto.git` dependency lines in `plugin-{vad,stt}/pyproject.toml` and the
+      "Consuming" section of `proto/README.md`, which describe publishing — out of scope.
 
 ### 5. Documentation
 
-- [ ] New ADR `docs/decisions/0015-monorepo.md` (Context / Decision / Rationale /
+- [x] New ADR `docs/decisions/0015-monorepo.md` (Context / Decision / Rationale /
       Consequences) from the "Decision" section above, including the three invariants and
       the conditions for the later hybrid split.
-- [ ] Mark `docs/decisions/0001-multi-repo-workspace.md` as
+- [x] Mark `docs/decisions/0001-multi-repo-workspace.md` as
       `Status: Superseded by 0015`. Do not rewrite its body.
-- [ ] `AGENTS.md`: rewrite §2 (the repository is no longer "a workspace, not the code"),
+- [x] `AGENTS.md`: rewrite §2 (the repository is no longer "a workspace, not the code"),
       §4 setup (no `clone-*`), §5 rules 2 and 3 (a cross-component change is one commit,
       still proto-first in order), §9 and §10 where they say "repo". Remove the migration
-      notice at the top.
-- [ ] `README.md`, `docs/development/workspace.md`, `docs/README.md` ("Per-repository
+      notice at the top. §2 also lists the three invariants.
+- [x] `README.md`, `docs/development/workspace.md`, `docs/README.md` ("Per-repository
       instructions" section and the ADR table).
-- [ ] Skills in `.codex/skills/`: `change-proto`, `add-engine-plugin` and
-      `verify-workspace` describe per-repository commits; update them.
-- [ ] Component-level `AGENTS.md`, `README.md` and `ENGINE.md` files that refer to "this
-      repo" or to cloning siblings.
+- [x] Skills in `.codex/skills/`: `change-proto`, `add-engine-plugin` and
+      `verify-workspace` describe per-repository commits; update them. Their
+      `buf breaking` command is now `--against '../.git#branch=main,subdir=proto'`, which
+      fails locally until `main` contains `proto/` (after step 7).
+- [x] Component-level `AGENTS.md`, `README.md` and `ENGINE.md` files that refer to "this
+      repo" or to cloning siblings. The engine `AGENTS.md` change was made in the two
+      templates and re-copied; `cmp` shows no drift.
 
 ### 6. Verify
 
@@ -229,8 +233,8 @@ done
 - [ ] Make this checkout the working directory. Carry over the local, untracked files
       from `~/src/speechmux` listed below; rebuild `.venv` with `make setup` and
       `node_modules` with `npm ci` rather than copying them.
-- [ ] Delete this document, its row in `docs/README.md`, its entry in
-      `docs/plans/roadmap.md`, and the notice in `AGENTS.md`.
+- [ ] Delete this document, its row in `docs/README.md` and its entry in
+      `docs/plans/roadmap.md`.
 
 ### Local files to carry over
 

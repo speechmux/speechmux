@@ -1,7 +1,7 @@
 # AGENTS.md — core
 
-The SpeechMux Core server (Go). Assumes the workspace root `AGENTS.md`; only what is
-specific to this repository is here.
+The SpeechMux Core server (Go). Assumes the repository root `AGENTS.md`; only what is
+specific to this directory is here.
 
 Root instructions: `../AGENTS.md` · Pipeline internals:
 `../docs/architecture/core-pipeline.md` · Package map:
@@ -50,12 +50,12 @@ Do not put logic in it.
 ## The proto dependency
 
 `go.mod` has a **committed** `replace github.com/speechmux/proto => ../proto`. Core compiles
-against the sibling `proto/` checkout, not a published module. Consequences:
+against the sibling `proto/` directory, not a published module. Consequences:
 
-- `proto/` must be cloned beside `core/` or Core does not build.
-- A regenerated `proto/gen/go` is visible here immediately.
-- Nothing pins the two repos to compatible commits. Commit proto first and mention the
-  proto commit in the Core commit message. Follow the `change-proto` skill.
+- A regenerated `proto/gen/go` is visible here immediately — and a half-edited one breaks
+  this build immediately.
+- A proto change and the Core change that uses it go in the same commit, worked
+  proto-first. Follow the `change-proto` skill.
 
 ## Build, test, lint
 
@@ -196,7 +196,7 @@ rate-limited.
   knowingly).
 - Change an existing `ERR####` row or an accepted ADR's decision.
 
-## Known gaps in this repo
+## Known gaps in Core
 
 - `batch_engine.go:353` sends `DecodeOptions: nil` and hardcodes `TASK_TRANSCRIBE` — the
   client's `decode_profile` and `task` never reach the plugin
