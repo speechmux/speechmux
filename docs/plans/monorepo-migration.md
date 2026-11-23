@@ -1,6 +1,7 @@
 # Monorepo migration
 
-**Status: in progress on the `monorepo` branch. Nothing is imported yet.**
+**Status: in progress on the `monorepo` branch. Steps 0–4 are done: all ten components are
+imported with history. Not pushed.**
 
 This is the hand-off for moving every SpeechMux component into this repository
 (`speechmux/speechmux`). It is self-contained: an agent or developer who has not seen the
@@ -107,8 +108,8 @@ the newer remote commit, if step 1 finds one).
 
 ## Steps
 
-**None of the commands below have been run yet.** They are the plan, not a record. Tick
-each box as it is done and note anything that differed.
+A ticked box was done as written unless a note says otherwise. Unticked boxes are still
+the plan, not a record.
 
 Three steps change something outside this machine and need the repository owner's
 explicit go-ahead each time: pushing the branch (step 7), merging to `main` (step 7) and
@@ -144,7 +145,7 @@ archiving the old repositories (step 8).
 REPOS="proto core plugin-vad plugin-vad-silero plugin-stt plugin-stt-sherpa-onnx \
 plugin-stt-mlx-whisper plugin-stt-faster-whisper client-web client-cli"
 
-# In the scratch directory: rewrite every commit so its files sit under <name>/.
+# In the scratch directory (bash; zsh does not word-split $REPOS): rewrite every commit so its files sit under <name>/.
 for r in $REPOS; do
   git -C src-$r filter-repo --to-subdirectory-filter $r
 done
@@ -157,23 +158,27 @@ for r in $REPOS; do
 done
 ```
 
-- [ ] Run the import. Commit hashes of imported commits change (paths are rewritten);
+- [x] Run the import. Commit hashes of imported commits change (paths are rewritten);
       `git log -- core/…` and `git blame` then follow the old history without `--follow`.
-- [ ] Verify every path: `git rev-parse monorepo:<path>` equals the tree hash in the table.
-- [ ] Confirm there is no nested `.git` (`find . -mindepth 2 -name .git`).
+- [x] Verify every path: `git rev-parse monorepo:<path>` equals the tree hash in the table.
+      All ten matched.
+- [x] Confirm there is no nested `.git` (`find . -mindepth 2 -name .git`).
 
 ### 4. Make the tree self-consistent
 
-- [ ] `Makefile`: remove the `clone-base`, `clone-stt`, `clone-vad`, `clone-web`,
+- [x] `Makefile`: remove the `clone-base`, `clone-stt`, `clone-vad`, `clone-web`,
       `clone-cli` targets, the `_clone` macro and their `.PHONY` entries. The `setup` and
       `test` loops over `plugin-vad-* plugin-stt-*` stay as they are.
-- [ ] CI: GitHub Actions reads only the root `.github/workflows/`. Move
-      `proto/.github/workflows/ci.yaml` to the root, give its jobs
-      `working-directory: proto`, and limit it to changes under `proto/`.
-      `buf breaking --against ".git#branch=main"` must point at the repository root and
-      the `proto` subdirectory instead; check the exact input syntax in the buf docs. It
-      cannot pass on the migration pull request itself, because `main` has no `proto/`
-      yet — expect that one failure or skip the job for that run.
+- [x] CI: GitHub Actions reads only the root `.github/workflows/`.
+      `proto/.github/workflows/ci.yaml` is now `.github/workflows/proto.yaml`, with
+      `working-directory: proto` and a `paths` filter on `proto/**`. The breaking check is
+      `buf breaking --against "../.git#branch=<base>,subdir=proto"`, verified locally with
+      buf 1.67.0. It needed one more step: `actions/checkout` leaves no local base branch
+      for buf to clone, so the job fetches it first. The check cannot pass on the migration
+      pull request itself, because `main` has no `proto/` yet (`Module "path: "proto"" had
+      no .proto files`) — expect that one failure. The workflow has not run on GitHub.
+      The `v*.*.*` tag trigger for the Python package artifact is unchanged; it is now a
+      repository-wide tag pattern, to be revisited when `proto` is actually published.
 - [ ] Search for anything else that assumes separate repositories:
       `grep -rnE 'make clone-|clone-base|git clone|gitignored|its own (GitHub )?repo' .`
       Known hits before the import: `Makefile`, `AGENTS.md`, `README.md`,

@@ -11,8 +11,8 @@ reasoning to an ADR in [../decisions/](../decisions/) instead.
 ## Repository structure
 
 [monorepo-migration.md](monorepo-migration.md) — every component repository is being
-imported into this one, with history, on the `monorepo` branch. In progress; nothing is
-imported yet.
+imported into this one, with history, on the `monorepo` branch. In progress: the import
+is done, the documentation and verification steps are not.
 
 ## Functional gaps in shipped features
 

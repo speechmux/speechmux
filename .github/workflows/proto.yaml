@@ -1,11 +1,21 @@
-name: CI
+name: Proto CI
 
 on:
   push:
     branches: [main]
     tags: ["v*.*.*"]
+    paths:
+      - "proto/**"
+      - ".github/workflows/proto.yaml"
   pull_request:
     branches: [main]
+    paths:
+      - "proto/**"
+      - ".github/workflows/proto.yaml"
+
+defaults:
+  run:
+    working-directory: proto
 
 jobs:
   generate:
@@ -52,9 +62,15 @@ jobs:
       - name: Lint
         run: buf lint
 
+      # actions/checkout fetches only the pull request's merge commit, so the base
+      # branch has to be fetched as a local branch before buf can clone it.
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=1 origin "+refs/heads/${{ github.base_ref }}:refs/heads/${{ github.base_ref }}"
+
       - name: Check breaking changes
         if: github.event_name == 'pull_request'
-        run: buf breaking --against ".git#branch=main"
+        run: buf breaking --against "../.git#branch=${{ github.base_ref }},subdir=proto"
 
   release:
     name: Release Python package
@@ -80,4 +96,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: speechmux-proto-python
-          path: gen/python/dist/
+          path: proto/gen/python/dist/
