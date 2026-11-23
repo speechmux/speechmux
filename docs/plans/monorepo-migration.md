@@ -1,7 +1,9 @@
 # Monorepo migration
 
-**Status: in progress on the `monorepo` branch. Steps 0–5 are done: all ten components are
-imported with history and the documentation describes one repository. Not pushed.**
+**Status: steps 0–6 are done on the `monorepo` branch: all ten components are imported
+with history, the documentation describes one repository, and the tree is verified. What
+is left needs the owner's go-ahead: pushing and merging (step 7), archiving the old
+repositories (step 8). Not pushed.**
 
 This is the hand-off for moving every SpeechMux component into this repository
 (`speechmux/speechmux`). It is self-contained: an agent or developer who has not seen the
@@ -209,14 +211,35 @@ done
 
 ### 6. Verify
 
-- [ ] `make setup` (or the light install in `AGENTS.md` §4), `make build`,
-      `cd core && go test ./...`, `go vet ./...`, `cd proto && buf lint`.
-- [ ] `pytest` in each plugin and in `client-cli`. `plugin-stt-sherpa-onnx` hangs for a
-      reason that predates this work — see `docs/development/testing.md#known-issues`.
-- [ ] `cd client-web/web && npm ci && npm test && npx tsc --noEmit && npm run lint`.
-- [ ] `docker compose config`.
-- [ ] The `e2e-test` skill against a running stack.
-- [ ] State plainly what was run and what failed.
+Run on 2026-11-24 at the commit after step 5, with the light install (no ML runtimes).
+Every failure below is in the baseline in `docs/development/testing.md#known-issues`;
+nothing new failed.
+
+- [x] Light install from `AGENTS.md` §4 (not `make setup`), `make build`,
+      `cd core && go test ./...` (all packages pass), `go vet ./...` (clean),
+      `cd proto && buf lint` (clean). `gofmt -l .` still lists 29 files.
+- [x] `pytest` in each plugin and in `client-cli`: `plugin-vad` 11 passed, `plugin-stt` 38,
+      `plugin-stt-mlx-whisper` 10, `plugin-stt-faster-whisper` 15, `client-cli` 29.
+      `plugin-stt-sherpa-onnx`: 4 fail, then the suite hangs (killed after 90 s) — the
+      known issue. `plugin-vad-silero`: not runnable, the tests import `torch`. `ruff`:
+      5 findings each in `plugin-vad` and `plugin-stt`; `mypy`: 1 error in `plugin-vad`,
+      clean in `plugin-stt`.
+- [x] `cd client-web/web && npm ci && npm test && npx tsc --noEmit && npm run lint`:
+      74 Vitest tests pass, `tsc` and ESLint clean.
+- [x] `docker compose --profile sherpa --profile faster-whisper config`: valid.
+- [ ] The `e2e-test` skill against a running stack. **Partly done.**
+      Done: Core, the dummy VAD and the dummy STT started by hand from this checkout on
+      spare ports; `/health` ok, `/admin/plugins` healthy, `speechmux file` fast and
+      `--realtime` both return finals. `scripts/smoke.sh` with this checkout's CLI against
+      the Docker stack that was already running: 8 passed, 0 failed — but those images
+      were built from `~/src/speechmux` two to six months ago, not from this tree.
+      Not done: real engines from images built here, and the web steps. `docker compose
+      up` from this directory uses the same project name (`speechmux`) and would replace
+      the running containers, and this checkout has no `.env` or model directory. The
+      component trees are byte-identical to the old repositories (step 3), so the images
+      would be too; rebuild and re-run after the switch in step 8.
+- [x] State plainly what was run and what failed. One finding unrelated to the migration:
+      Core does not exit after SIGTERM — recorded in `roadmap.md`.
 
 ### 7. Publish — owner approval required
 
