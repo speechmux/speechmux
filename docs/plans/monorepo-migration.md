@@ -116,25 +116,26 @@ archiving the old repositories (step 8).
 
 ### 0. Commit this hand-off
 
-- [ ] Commit this file together with the `AGENTS.md` notice, the `docs/README.md` row and
+- [x] Commit this file together with the `AGENTS.md` notice, the `docs/README.md` row and
       the `docs/plans/roadmap.md` entry. The merges in step 3 need a clean working tree.
 
 ### 1. Prerequisites
 
-- [ ] Install `git-filter-repo` (`brew install git-filter-repo`). It was not installed on
-      2026-11-24.
-- [ ] Clone the ten component repositories fresh into a scratch directory **outside**
-      this checkout (for example `~/repo/speechmux-import/src-<name>`). Never run
+- [x] Install `git-filter-repo` (`brew install git-filter-repo`). Already present at
+      `/opt/homebrew/bin/git-filter-repo` when this step was run.
+- [x] Clone the ten component repositories fresh into a scratch directory **outside**
+      this checkout (`~/repo/speechmux-import/src-<name>`). Never run
       `filter-repo` on the clones in `~/src/speechmux`; it rewrites history in place.
-- [ ] For each fresh clone, compare `git rev-parse 'HEAD^{tree}'` with the table above. A
+- [x] For each fresh clone, compare `git rev-parse 'HEAD^{tree}'` with the table above. A
       different hash means something was pushed after 2026-11-24 — update the table.
-- [ ] Check each component repository for open issues and pull requests
-      (`gh issue list -R speechmux/<name>`, `gh pr list -R speechmux/<name>`). This was not
-      checked. Anything open must be resolved or moved before step 8.
+      All ten matched.
+- [x] Check each component repository for open issues and pull requests
+      (`gh issue list -R speechmux/<name>`, `gh pr list -R speechmux/<name>`). None
+      of the ten had an open issue or pull request.
 
 ### 2. Stop ignoring the component directories
 
-- [ ] In `.gitignore`, delete the block that ignores `proto/`, `core/`, `plugin-*/` and
+- [x] In `.gitignore`, delete the block that ignores `proto/`, `core/`, `plugin-*/` and
       `client-*/` (and its two comment lines). Commit.
 
 ### 3. Import each repository with its history
