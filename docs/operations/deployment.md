@@ -171,6 +171,15 @@ recreating `client-web-api` leaves host port 8000 unpublished. `docker ps` still
 open its WebSocket (observed on OrbStack, 2026-11-24). Remote users are unaffected — their
 route goes to Core's 8091. Tracked in [../plans/roadmap.md](../plans/roadmap.md).
 
+To recover, take the Tailscale route down, restart the container, and put the route back:
+
+```bash
+tailscale serve --bg --https 8000 off
+docker compose --profile sherpa --profile faster-whisper restart client-web-api
+tailscale serve --bg --https 8000 http://localhost:8091
+curl -s http://127.0.0.1:8000/health     # {"status":"ok"} once uvicorn is up
+```
+
 ---
 
 ## Production checklist

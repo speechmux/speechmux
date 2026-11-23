@@ -224,8 +224,9 @@ What the 2026-11-24 runs covered, after every component was imported into this r
 - After the containers were recreated, host port 8000 (the web API) was no longer
   reachable: `scripts/remote-access.sh` had Tailscale listening on the same port. The web
   rows above were run through a second `client-web-api` container published on 8001, with
-  the page's WebSocket URL (Advanced) pointed at it. See
-  [../operations/deployment.md](../operations/deployment.md#remote-access-tailscale).
+  the page's WebSocket URL (Advanced) pointed at it. After the recovery in
+  [../operations/deployment.md](../operations/deployment.md#remote-access-tailscale), one
+  sherpa-onnx upload through the default `ws://127.0.0.1:8000` also passed.
 
 Open Core/CLI issues surfaced by E2E are tracked in
 [../plans/roadmap.md](../plans/roadmap.md#findings-from-end-to-end-testing).
